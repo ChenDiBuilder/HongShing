@@ -1,0 +1,27 @@
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+.egg-info/
+dist/
+.pytest_cache/
+test-results/
+.playwright-mcp/
+*.png
+*.jpg
+.env
+.DS_Store
+thumbs.db
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+*.log
+
+# Terraform secrets
+terraform.tfvars
+!terraform.tfvars.example
+
+# Build artifacts
+hongshing_backend.egg-info/
+

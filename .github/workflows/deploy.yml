@@ -1,0 +1,89 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  ECR_BACKEND: hongshing/backend
+  ECR_CUSTOMER_WEB: hongshing/customer-web
+  ECS_CLUSTER: hongshing-production
+  ECS_SERVICE: hongshing-backend-production
+  S3_FRONTEND: hongshing-frontend-production
+
+jobs:
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push backend image
+        run: |
+          docker build -t ${{ env.ECR_BACKEND }}:${{ github.sha }} -f backend/Dockerfile backend/
+          docker tag ${{ env.ECR_BACKEND }}:${{ github.sha }} ${{ env.ECR_BACKEND }}:latest
+          docker push ${{ env.ECR_BACKEND }}:${{ github.sha }}
+          docker push ${{ env.ECR_BACKEND }}:latest
+
+      - name: Deploy to ECS
+        run: |
+          aws ecs update-service \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --service ${{ env.ECS_SERVICE }} \
+            --force-new-deployment
+
+      - name: Wait for ECS deployment
+        run: |
+          aws ecs wait services-stable \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --services ${{ env.ECS_SERVICE }}
+
+  customer-web:
+    name: Customer Web
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: customer-web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: customer-web
+
+      - name: Build
+        run: npm run build
+        working-directory: customer-web
+
+      - name: Deploy to S3
+        run: |
+          aws s3 sync customer-web/dist/ s3://${{ env.S3_FRONTEND }}/ --delete
+
+      - name: Invalidate CloudFront
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --paths "/*"
