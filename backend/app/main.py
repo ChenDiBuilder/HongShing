@@ -23,6 +23,7 @@ from app.routes import (
 )
 from app.routes.test_routes import router as test_router
 from app.routes.menu import router as menu_router
+from app.routes.orders import router as orders_router
 
 
 @asynccontextmanager
@@ -74,6 +75,9 @@ app.include_router(test_router)
 
 # Menu
 app.include_router(menu_router)
+
+# Orders
+app.include_router(orders_router)
 
 
 @app.get("/api/health")

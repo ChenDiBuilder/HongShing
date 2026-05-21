@@ -10,6 +10,7 @@ from app.models.notification import (
 )
 from app.models.test_sms import TestSmsMessage
 from app.models.menu import Category, MenuItem
+from app.models.order import Order, OrderItem
 
 __all__ = [
     "Base",
@@ -32,4 +33,6 @@ __all__ = [
     "TestSmsMessage",
     "Category",
     "MenuItem",
+    "Order",
+    "OrderItem",
 ]

@@ -133,6 +133,14 @@ export default function App() {
                 <p className="text-sm text-gray-500">Total Rewards</p>
                 <p className="text-3xl font-bold mt-1">{dashboard?.total_rewards ?? 0}</p>
               </div>
+              <div className="bg-white rounded-xl shadow-sm p-6">
+                <p className="text-sm text-gray-500">Total Orders</p>
+                <p className="text-3xl font-bold mt-1">{dashboard?.total_orders ?? 0}</p>
+              </div>
+              <div className="bg-white rounded-xl shadow-sm p-6">
+                <p className="text-sm text-gray-500">Pending Orders</p>
+                <p className="text-3xl font-bold mt-1">{dashboard?.confirmed_orders ?? 0}</p>
+              </div>
             </div>
           </div>
         )}

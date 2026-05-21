@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, createContext } from "react";
 
 // ------------------ Types ------------------
-type Page = "landing" | "otp" | "reward" | "profile" | "menu" | "product-detail" | "cart" | "terms" | "privacy";
+type Page = "landing" | "otp" | "reward" | "profile" | "menu" | "product-detail" | "cart" | "order-confirmation" | "terms" | "privacy";
 
 interface LandingConfig {
   restaurant_name: string;
@@ -99,6 +99,7 @@ export default function App() {
   const [menu, setMenu] = useState<{ id: string; name: string; slug: string; image_url: string | null; items: MenuItemType[] }[]>([]);
   const [activeCategory, setActiveCategory] = useState<string>("");
   const [selectedProduct, setSelectedProduct] = useState<MenuItemType | null>(null);
+  const [orderConfirmation, setOrderConfirmation] = useState<{ order_id: string; total_cents: number; item_count: number } | null>(null);
 
   // Cart state
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -245,6 +246,34 @@ export default function App() {
   async function handleOrderWithoutReward() {
     setPage("menu");
     await loadMenu();
+  }
+
+  async function handlePlaceOrder() {
+    if (!profile) { setPage("landing"); return; }
+    setLoading(true);
+    try {
+      const res = await fetch(api("/api/orders"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          items: cartItems.map((ci) => ({
+            menu_item_id: ci.item.id,
+            name: ci.item.name,
+            price_cents: ci.item.price_cents,
+            quantity: ci.quantity,
+          })),
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setOrderConfirmation(data);
+        clearCart();
+        setPage("order-confirmation");
+      }
+    } catch {} finally {
+      setLoading(false);
+    }
   }
 
   function goToProfile() {
@@ -642,19 +671,61 @@ export default function App() {
                     <span>{itemCount} item{itemCount !== 1 ? "s" : ""}</span>
                     <span>Pickup only</span>
                   </div>
-                  <button onClick={() => {
-                    if (!profile) { setPage("landing"); return; }
-                    clearCart();
-                    setPage("reward");
-                  }}
-                    className="w-full py-3 text-white font-semibold rounded-lg text-lg"
+                  <button onClick={handlePlaceOrder}
+                    disabled={loading}
+                    className="w-full py-3 text-white font-semibold rounded-lg text-lg disabled:opacity-50"
                     style={{ backgroundColor: config.primary_color }}>
-                    {profile ? "Place Order" : "Sign in to Checkout"}
+                    {loading ? "Placing order..." : profile ? "Place Order" : "Sign in to Checkout"}
                   </button>
                   <button onClick={clearCart} className="w-full mt-2 py-2 text-sm text-gray-400 underline">Clear cart</button>
                 </div>
               </div>
             )}
+          </div>
+        </div>
+        {footer}
+      </div>
+    );
+  }
+
+  // Order confirmation page
+  if (page === "order-confirmation" && orderConfirmation) {
+    content = (
+      <div className="min-h-screen bg-gray-50">
+        {header}
+        <div className="max-w-md mx-auto p-4 mt-4">
+          <div className="bg-white rounded-2xl shadow p-8 text-center">
+            <div className="text-5xl mb-4">✅</div>
+            <h2 className="text-2xl font-bold mb-2">Order Confirmed!</h2>
+            <p className="text-gray-600 mb-6">Your order has been placed for pickup.</p>
+            <div className="bg-gray-50 rounded-xl p-4 mb-6 text-left">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">Order ID</span>
+                <span className="font-mono font-semibold text-xs">{orderConfirmation.order_id.slice(0, 8)}</span>
+              </div>
+              <div className="flex justify-between text-sm mt-2">
+                <span className="text-gray-500">Items</span>
+                <span>{orderConfirmation.item_count}</span>
+              </div>
+              <div className="flex justify-between text-sm mt-2">
+                <span className="text-gray-500">Total</span>
+                <span className="font-bold" style={{ color: config.primary_color }}>{formatPrice(orderConfirmation.total_cents)}</span>
+              </div>
+              <div className="flex justify-between text-sm mt-2">
+                <span className="text-gray-500">Status</span>
+                <span className="text-green-600 font-medium">Pickup pending</span>
+              </div>
+            </div>
+            <button onClick={() => { setPage("menu"); setOrderConfirmation(null); loadMenu(); }}
+              className="w-full py-3 text-white font-semibold rounded-lg text-lg mb-3"
+              style={{ backgroundColor: config.primary_color }}>
+              Back to Menu
+            </button>
+            <button onClick={goToProfile}
+              className="w-full py-3 border-2 font-semibold rounded-lg text-lg"
+              style={{ borderColor: config.primary_color, color: config.primary_color }}>
+              View My Rewards
+            </button>
           </div>
         </div>
         {footer}
