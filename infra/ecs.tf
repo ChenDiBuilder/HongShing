@@ -1,24 +1,3 @@
-resource "aws_security_group" "ecs" {
-  name        = "${var.app_name}-ecs-${var.environment}"
-  description = "ECS tasks security group"
-  vpc_id      = aws_vpc.main.id
-
-  ingress {
-    description     = "HTTP from ALB"
-    from_port       = var.container_port
-    to_port         = var.container_port
-    protocol        = "tcp"
-    security_groups = [aws_security_group.alb.id]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
 resource "aws_ecs_cluster" "main" {
   name = "${var.app_name}-${var.environment}"
 
@@ -47,17 +26,14 @@ resource "aws_ecs_task_definition" "backend" {
       name  = "backend"
       image = "${aws_ecr_repository.backend.repository_url}:latest"
       portMappings = [
-        {
-          containerPort = var.container_port
-          protocol      = "tcp"
-        }
+        { containerPort = var.container_port, protocol = "tcp" }
       ]
       environment = [
         { name = "APP_ENV", value = var.environment },
         { name = "AWS_REGION", value = var.aws_region },
         { name = "S3_BUCKET", value = aws_s3_bucket.assets.id },
-        { name = "SQS_QUEUE_URL", value = "" },
         { name = "SNS_SENDER_ID", value = "HongShing" },
+        { name = "SNS_ORIGINATION_NUMBER", value = "+12368645995" },
         { name = "OWNER_EMAIL", value = var.owner_email },
       ]
       secrets = [
@@ -85,6 +61,49 @@ resource "aws_ecs_task_definition" "backend" {
   ])
 }
 
+# Target group on Vela's ALB
+resource "aws_lb_target_group" "backend" {
+  name        = "${var.app_name}-backend-${var.environment}"
+  port        = var.container_port
+  protocol    = "HTTP"
+  vpc_id      = data.aws_vpc.vela.id
+  target_type = "ip"
+
+  health_check {
+    path                = "/api/health"
+    interval            = 30
+    timeout             = 10
+    healthy_threshold   = 2
+    unhealthy_threshold = 3
+    matcher             = "200"
+  }
+
+  deregistration_delay = 30
+}
+
+# Add HK API routing to Vela's ALB
+resource "aws_lb_listener_rule" "hongshing_api" {
+  listener_arn = data.aws_lb_listener.vela_http.arn
+  priority     = 11
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.backend.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/api/*"]
+    }
+  }
+
+  condition {
+    host_header {
+      values = [aws_cloudfront_distribution.main.domain_name]
+    }
+  }
+}
+
 resource "aws_ecs_service" "backend" {
   name                   = "${var.app_name}-backend-${var.environment}"
   cluster                = aws_ecs_cluster.main.id
@@ -94,9 +113,9 @@ resource "aws_ecs_service" "backend" {
   enable_execute_command = true
 
   network_configuration {
-    subnets          = aws_subnet.private[*].id
-    security_groups  = [aws_security_group.ecs.id]
-    assign_public_ip = var.environment != "production"
+    subnets          = data.aws_subnets.vela_public.ids
+    security_groups  = [data.aws_security_group.vela_ecs.id]
+    assign_public_ip = true
   }
 
   load_balancer {
@@ -105,5 +124,12 @@ resource "aws_ecs_service" "backend" {
     container_port   = var.container_port
   }
 
-  depends_on = [aws_lb_listener.http]
+  force_new_deployment = true
+  deployment_maximum_percent         = 200
+  deployment_minimum_healthy_percent = 100
+
+  deployment_circuit_breaker {
+    enable   = true
+    rollback = true
+  }
 }
