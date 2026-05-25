@@ -1,8 +1,19 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends
 from sqlalchemy import func, select
 
 from app.database import AsyncSession, get_db
-from app.models import Order, QRCampaign, Reward, SignupEvent, User
+from app.models import (
+    Order,
+    QRCampaign,
+    QRScanEvent,
+    Reward,
+    SignupEvent,
+    ExternalOrderRedirect,
+    User,
+    UserNotificationPreference,
+)
 from app.middleware.auth import require_admin
 
 router = APIRouter()
@@ -13,7 +24,9 @@ async def dashboard(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_admin(["owner", "manager", "staff"])),
 ):
-    # Counts
+    now = datetime.now(timezone.utc)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+
     total_customers = await db.scalar(
         select(func.count(User.id)).where(User.role == "customer")
     )
@@ -33,6 +46,34 @@ async def dashboard(
         select(func.count(Order.id)).where(Order.status == "confirmed")
     )
 
+    scans_today = await db.scalar(
+        select(func.count(QRScanEvent.id)).where(
+            QRScanEvent.event_type == "scan_confirmed",
+            QRScanEvent.is_likely_bot == False,  # noqa: E712
+            QRScanEvent.created_at >= today_start,
+        )
+    ) or 0
+    signups_today = await db.scalar(
+        select(func.count(SignupEvent.id)).where(SignupEvent.created_at >= today_start)
+    ) or 0
+    redirects_today = await db.scalar(
+        select(func.count(ExternalOrderRedirect.id)).where(
+            ExternalOrderRedirect.created_at >= today_start
+        )
+    ) or 0
+
+    sent_opt_in = await db.scalar(
+        select(func.count(UserNotificationPreference.user_id)).where(
+            UserNotificationPreference.sms_marketing_opt_in == True,  # noqa: E712
+        )
+    )
+    total_prefs = await db.scalar(
+        select(func.count(UserNotificationPreference.user_id))
+    )
+    sms_opt_in_rate = (
+        round(sent_opt_in / total_prefs * 100, 1) if total_prefs else 0.0
+    )
+
     return {
         "data": {
             "total_customers": total_customers or 0,
@@ -43,5 +84,9 @@ async def dashboard(
             "redeemed_rewards": redeemed_rewards or 0,
             "total_orders": total_orders or 0,
             "confirmed_orders": confirmed_orders or 0,
+            "scans_today": scans_today,
+            "signups_today": signups_today,
+            "redirects_today": redirects_today,
+            "sms_opt_in_rate": sms_opt_in_rate,
         }
     }

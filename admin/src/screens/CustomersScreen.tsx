@@ -32,12 +32,15 @@ export default function CustomersScreen() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<CustomerDetail | null>(null);
+  const [loading, setLoading] = useState(true);
 
   async function load() {
+    setLoading(true);
     const params = search ? `?search=${encodeURIComponent(search)}` : "";
     const r = await fetch(`${apiBase}/api/admin/customers${params}`, { credentials: "include" });
     const d = await r.json();
     setCustomers(d.data?.items || []);
+    setLoading(false);
   }
 
   async function viewCustomer(id: string) {
@@ -98,6 +101,11 @@ export default function CustomersScreen() {
         <button onClick={load} className="px-4 py-2 bg-red-600 text-white rounded-lg">Search</button>
       </div>
       <div className="bg-white rounded-xl shadow-sm">
+        {loading ? (
+          <p className="text-center text-gray-400 py-12">Loading customers...</p>
+        ) : customers.length === 0 ? (
+          <p className="text-center text-gray-400 py-8">No customers found</p>
+        ) : (
         <table className="w-full">
           <thead><tr className="border-b text-left text-sm text-gray-500"><th className="p-4">Phone</th><th className="p-4">Name</th><th className="p-4">Email</th><th className="p-4">Joined</th></tr></thead>
           <tbody>
@@ -111,7 +119,7 @@ export default function CustomersScreen() {
             ))}
           </tbody>
         </table>
-        {customers.length === 0 && <p className="text-center text-gray-400 py-8">No customers found</p>}
+        )}
       </div>
     </div>
   );

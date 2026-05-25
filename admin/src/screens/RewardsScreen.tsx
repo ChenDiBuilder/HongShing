@@ -24,6 +24,7 @@ interface Props { showToast: (msg: string, type?: "success" | "error") => void; 
 export default function RewardsScreen({ showToast }: Props) {
   const [templates, setTemplates] = useState<RewardTemplate[]>([]);
   const [rewards, setRewards] = useState<Reward[]>([]);
+  const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"templates" | "issued">("templates");
   const [name, setName] = useState("");
   const [value, setValue] = useState(500);
@@ -31,12 +32,14 @@ export default function RewardsScreen({ showToast }: Props) {
   const [validDays, setValidDays] = useState(30);
 
   useEffect(() => {
-    fetch(`${apiBase}/api/admin/reward-templates`, { credentials: "include" })
-      .then((r) => r.json())
-      .then((d) => setTemplates(d.data || []));
-    fetch(`${apiBase}/api/admin/rewards`, { credentials: "include" })
-      .then((r) => r.json())
-      .then((d) => setRewards(d.data || []));
+    (async () => {
+      setLoading(true);
+      const t = await fetch(`${apiBase}/api/admin/reward-templates`, { credentials: "include" });
+      setTemplates((await t.json()).data || []);
+      const r = await fetch(`${apiBase}/api/admin/rewards`, { credentials: "include" });
+      setRewards((await r.json()).data || []);
+      setLoading(false);
+    })();
   }, []);
 
   async function handleCreate(e: React.FormEvent) {
@@ -110,6 +113,9 @@ export default function RewardsScreen({ showToast }: Props) {
           </form>
 
           <div className="bg-white rounded-xl shadow-sm">
+            {loading ? (
+              <p className="text-center text-gray-400 py-12">Loading templates...</p>
+            ) : (
             <table className="w-full">
               <thead><tr className="border-b text-left text-sm text-gray-500"><th className="p-4">Name</th><th className="p-4">Type</th><th className="p-4">Value</th><th className="p-4">Valid Days</th><th className="p-4">Active</th><th className="p-4">Actions</th></tr></thead>
               <tbody>
@@ -123,6 +129,7 @@ export default function RewardsScreen({ showToast }: Props) {
                 ))}
               </tbody>
             </table>
+            )}
           </div>
         </>
       )}

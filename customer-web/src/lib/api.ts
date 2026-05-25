@@ -62,8 +62,8 @@ export function sendOTP(phone: string, sourceCode?: string) {
   });
 }
 
-export function verifyOTP(phone: string, code: string) {
-  return request<TokenResponse>("POST", "/auth/verify-otp", { phone, code });
+export function verifyOTP(phone: string, code: string, sourceCode?: string) {
+  return request<TokenResponse>("POST", "/auth/verify-otp", { phone, code, source_code: sourceCode });
 }
 
 // Public

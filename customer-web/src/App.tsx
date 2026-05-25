@@ -13,7 +13,7 @@ import type { Page, LandingConfig, MenuItemType, UserReward } from "./types";
 const HARDCODED_OTP = "111111";
 
 export default function App() {
-  const [page, setPage] = useState<Page>("home");
+  const [page, setPage] = useState<Page>("menu");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
@@ -31,6 +31,7 @@ export default function App() {
 
   const sourceRef = useRef<string | undefined>(undefined);
   const autoVerifyRef = useRef(false);
+  const returnPageRef = useRef<Page>("menu");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -73,7 +74,7 @@ export default function App() {
       setOrderConfirmation(d);
       setPage("order-confirmation");
     };
-    const onSignIn = () => setPage("landing");
+    const onSignIn = () => { returnPageRef.current = page as Page; setPage("landing"); };
     window.addEventListener("order-placed", onOrderPlaced);
     window.addEventListener("signin-required", onSignIn);
     return () => {
@@ -87,7 +88,7 @@ export default function App() {
     try {
       const res = await fetch(api("/api/auth/verify-otp"), {
         method: "POST", headers: { "Content-Type": "application/json" },
-        credentials: "include", body: JSON.stringify({ phone, code }),
+        credentials: "include", body: JSON.stringify({ phone, code, source_code: sourceRef.current }),
       });
       if (!res.ok) throw new Error("Invalid code");
       const d = await res.json();
@@ -101,7 +102,9 @@ export default function App() {
       } catch {}
       loadRewards();
       await loadMenu();
-      setPage("reward");
+      const goTo = returnPageRef.current === "otp" || returnPageRef.current === "landing" ? "menu" : returnPageRef.current;
+      returnPageRef.current = "menu";
+      setPage(goTo);
     } catch { setError("Invalid or expired code."); }
     finally { setLoading(false); }
   }, [phone, loadRewards, loadMenu, cart]);
@@ -147,7 +150,8 @@ export default function App() {
   const header = showHeader ? (
     <Header config={config} profile={profile} itemCount={cart.itemCount} subtotalCents={cart.subtotalCents} setPage={setPage}
       loadMenu={loadMenu} loadRewards={loadRewards} loadReservationSlots={() => {}}
-      loadMyReservations={() => {}} loadCustomerOrders={loadCustomerOrders} handleLogout={handleLogout} />
+      loadMyReservations={() => {}} loadCustomerOrders={loadCustomerOrders} handleLogout={handleLogout}
+      onSignIn={() => { returnPageRef.current = page as Page; setPage("landing"); }} />
   ) : null;
   const footer = showFooter ? <Footer setPage={setPage} /> : null;
 
@@ -164,7 +168,8 @@ export default function App() {
     content = (
       <HomePage primaryColor={config.primary_color} logoUrl={config.logo_url}
         secondaryColor={config.secondary_color} campaign={config.campaign}
-        setPage={setPage} loadMenu={loadMenu} />
+        setPage={setPage} loadMenu={loadMenu}
+        onClaimReward={() => { returnPageRef.current = "reward"; setPage("landing"); }} />
     );
     content = <>{content}<Footer setPage={setPage} /></>;
   } else if (page === "landing") {

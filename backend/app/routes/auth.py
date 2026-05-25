@@ -71,10 +71,25 @@ async def verify_otp(
     result = await db.execute(select(User).where(User.phone == body.phone))
     user = result.scalar_one_or_none()
 
+    is_new_user = False
     if not user:
+        is_new_user = True
         user = User(phone=body.phone, role="customer")
         db.add(user)
         await db.flush()
+
+    if is_new_user:
+        from app.models import SignupEvent
+
+        signup = SignupEvent(
+            user_id=user.id,
+            phone=body.phone,
+            source_code=body.source_code,
+            qr_campaign_id=body.campaign_id,
+            signup_method="qr",
+            marketing_opt_in=body.marketing_opt_in,
+        )
+        db.add(signup)
 
     access_token = create_access_token(user.id, user.role)
     refresh_token_str = create_refresh_token(user.id, user.role)

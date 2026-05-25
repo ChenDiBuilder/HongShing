@@ -10,9 +10,10 @@ interface HeaderProps {
   loadMyReservations: () => void;
   loadCustomerOrders: () => void;
   handleLogout?: () => void;
+  onSignIn?: () => void;
 }
 
-export function Header({ config, profile, itemCount, subtotalCents, setPage, loadMenu, loadRewards, loadReservationSlots: _rs, loadMyReservations: _mr, loadCustomerOrders, handleLogout }: HeaderProps) {
+export function Header({ config, profile, itemCount, subtotalCents, setPage, loadMenu, loadRewards, loadReservationSlots: _rs, loadMyReservations: _mr, loadCustomerOrders, handleLogout, onSignIn }: HeaderProps) {
   const primary = config?.primary_color || "#C41E3A";
 
   return (
@@ -33,7 +34,7 @@ export function Header({ config, profile, itemCount, subtotalCents, setPage, loa
               <NavBtn onClick={handleLogout || (() => {})}>Sign Out</NavBtn>
             </>
           ) : (
-            <NavBtn onClick={() => setPage("landing")} primary={primary}>Sign In</NavBtn>
+            <NavBtn onClick={onSignIn || (() => {})} primary={primary}>Sign In</NavBtn>
           )}
         </nav>
       </div>

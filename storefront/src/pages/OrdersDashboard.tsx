@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { api } from "../lib/api";
-import { STATUS_COLORS, STATUS_LABEL, ORDER_FILTERS, timeAgo, formatOrderForCopy } from "../lib/types";
+import { STATUS_COLORS, STATUS_LABEL, ORDER_FILTERS, timeAgo } from "../lib/types";
 
 interface Props {
   orders: any[];
@@ -49,7 +49,6 @@ export function OrdersDashboard({ orders, activeFilter, onFilterChange, filterCo
 
 function OrderCard({ order }: { order: any }) {
   const [status, setStatus] = useState(order.status);
-  const [copied, setCopied] = useState(false);
 
   async function updateStatus(newStatus: string) {
     try {
@@ -61,13 +60,6 @@ function OrderCard({ order }: { order: any }) {
       });
       if (res.ok) setStatus(newStatus);
     } catch {}
-  }
-
-  function handleCopy() {
-    navigator.clipboard.writeText(formatOrderForCopy({ ...order, status })).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }).catch(() => {});
   }
 
   const statusBadge = (
@@ -139,16 +131,6 @@ function OrderCard({ order }: { order: any }) {
             </button>
           </>
         )}
-        <button
-          onClick={handleCopy}
-          className={`min-h-[44px] px-4 py-2.5 rounded-xl text-base font-medium border active:scale-95 transition-all ${copied ? "bg-green-600 text-white border-green-600" : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"}`}>
-          {copied ? "Copied!" : "Copy"}
-        </button>
-        <button
-          onClick={() => window.print()}
-          className="min-h-[44px] px-4 py-2.5 rounded-xl text-base font-medium border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 active:scale-95 transition-transform">
-          Print
-        </button>
       </div>
     </div>
   );

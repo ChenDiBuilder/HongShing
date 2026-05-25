@@ -24,14 +24,17 @@ interface Props { statusFilter?: string; }
 export default function OrdersScreen({ statusFilter: initial }: Props) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [statusFilter, setStatusFilter] = useState(initial || "");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => { setStatusFilter(initial || ""); }, [initial]);
 
   async function load() {
+    setLoading(true);
     const params = statusFilter ? `?status=${statusFilter}` : "";
     const r = await fetch(`${apiBase}/api/admin/orders${params}`, { credentials: "include" });
     const d = await r.json();
     setOrders(d.data?.items || []);
+    setLoading(false);
   }
 
   useEffect(() => { load(); }, [statusFilter]);
@@ -50,6 +53,12 @@ export default function OrdersScreen({ statusFilter: initial }: Props) {
       </div>
 
       <div className="space-y-3">
+        {loading ? (
+          <p className="text-center text-gray-400 py-12">Loading orders...</p>
+        ) : orders.length === 0 ? (
+          <p className="text-center text-gray-400 py-12">No orders found</p>
+        ) : (
+        <>
         {orders.map((o) => (
           <div key={o.id} className="bg-white rounded-xl shadow-sm p-4">
             <div className="flex items-center justify-between mb-2">
@@ -64,8 +73,7 @@ export default function OrdersScreen({ statusFilter: initial }: Props) {
             </div>
           </div>
         ))}
-        {orders.length === 0 && (
-          <p className="text-center text-gray-400 py-12">No orders found</p>
+        </>
         )}
       </div>
     </div>

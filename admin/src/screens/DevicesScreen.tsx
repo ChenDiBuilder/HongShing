@@ -8,12 +8,15 @@ interface Props { showToast: (msg: string, type?: "success" | "error") => void; 
 
 export default function DevicesScreen({ showToast }: Props) {
   const [devices, setDevices] = useState<Device[]>([]);
+  const [loading, setLoading] = useState(true);
   const [name, setName] = useState(""); const [location, setLocation] = useState("");
   const [newDevice, setNewDevice] = useState<{ name: string; pin: string } | null>(null);
   const [error, setError] = useState("");
 
   const loadDevices = useCallback(async () => {
+    setLoading(true);
     const r = await fetch(`${apiBase}/api/admin/devices`, { credentials: "include" }); const d = await r.json(); setDevices(d.data || []);
+    setLoading(false);
   }, []);
 
   useEffect(() => { loadDevices(); }, [loadDevices]);
@@ -65,6 +68,10 @@ export default function DevicesScreen({ showToast }: Props) {
         <table className="w-full">
           <thead className="bg-gray-50 border-b"><tr><th className="text-left px-4 py-3 text-sm font-medium text-gray-500">Name</th><th className="text-left px-4 py-3 text-sm font-medium text-gray-500">Location</th><th className="text-left px-4 py-3 text-sm font-medium text-gray-500">Status</th><th className="text-left px-4 py-3 text-sm font-medium text-gray-500">Created</th><th className="text-right px-4 py-3 text-sm font-medium text-gray-500">Actions</th></tr></thead>
           <tbody>
+            {loading ? (
+              <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">Loading devices...</td></tr>
+            ) : (
+            <>
             {devices.map(d => (
               <tr key={d.id} className="border-b last:border-0">
                 <td className="px-4 py-3 font-medium">{d.name}</td><td className="px-4 py-3 text-sm text-gray-500">{d.location || "-"}</td>
@@ -73,7 +80,9 @@ export default function DevicesScreen({ showToast }: Props) {
                 <td className="px-4 py-3 text-right"><button onClick={() => handleDeactivate(d.id)} className="text-sm text-red-600 hover:underline">Deactivate</button></td>
               </tr>
             ))}
-            {devices.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">No devices yet — create one above</td></tr>}
+            {devices.length === 0 && !loading && <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">No devices yet — create one above</td></tr>}
+            </>
+            )}
           </tbody>
         </table>
       </div>

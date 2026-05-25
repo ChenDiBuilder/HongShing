@@ -38,6 +38,12 @@ export interface DashboardResponse {
     total_rewards: number;
     issued_rewards: number;
     redeemed_rewards: number;
+    total_orders: number;
+    confirmed_orders: number;
+    scans_today: number;
+    signups_today: number;
+    redirects_today: number;
+    sms_opt_in_rate: number;
   };
 }
 

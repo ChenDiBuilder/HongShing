@@ -5,22 +5,42 @@ import { CartBar } from "../components/CartBar";
 
 function QuickAddButton({ item, primaryColor }: { item: MenuItemType; primaryColor: string }) {
   const cart = useCart();
-  const [added, setAdded] = useState(false);
+  const cartItem = cart.items.find((ci) => ci.item.id === item.id);
+  const qty = cartItem?.quantity || 0;
 
   function handleAdd(e: React.MouseEvent) {
     e.stopPropagation();
     cart.addItem(item);
-    setAdded(true);
-    setTimeout(() => setAdded(false), 1200);
+  }
+
+  function handleRemove(e: React.MouseEvent) {
+    e.stopPropagation();
+    cart.updateQuantity(item.id, qty - 1);
+  }
+
+  if (qty > 0) {
+    return (
+      <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+        <button
+          onClick={handleRemove}
+          className="min-h-[32px] min-w-[32px] rounded-lg border border-gray-200 text-gray-500 font-bold text-sm flex items-center justify-center active:scale-90 transition-transform"
+          aria-label={`Remove one ${item.name}`}>−</button>
+        <span className="text-sm font-bold w-6 text-center">{qty}</span>
+        <button
+          onClick={handleAdd}
+          className="min-h-[32px] min-w-[32px] rounded-lg border border-gray-200 text-gray-500 font-bold text-sm flex items-center justify-center active:scale-90 transition-transform"
+          aria-label={`Add one ${item.name}`}>+</button>
+      </div>
+    );
   }
 
   return (
     <button
       onClick={handleAdd}
-      className={`min-h-[36px] px-3 py-1.5 rounded-xl flex items-center justify-center text-white font-semibold text-sm transition-all active:scale-90 ${added ? "bg-green-600" : ""}`}
-      style={{ backgroundColor: added ? undefined : primaryColor }}
+      className="min-h-[36px] px-3 py-1.5 rounded-xl flex items-center justify-center text-white font-semibold text-sm transition-all active:scale-90"
+      style={{ backgroundColor: primaryColor }}
       aria-label={`Add ${item.name} to cart`}>
-      {added ? "Added ✓" : "Add"}
+      Add
     </button>
   );
 }
@@ -218,13 +238,18 @@ export function ProductDetailPage({ product, setPage, primaryColor }: {
   product: MenuItemType; setPage: (p: any) => void; primaryColor: string;
 }) {
   const cart = useCart();
+  const cartItem = cart.items.find((ci) => ci.item.id === product.id);
+  const inCart = cartItem?.quantity || 0;
   const [added, setAdded] = useState(false);
-  const [qty, setQty] = useState(1);
 
   function handleAdd() {
-    for (let i = 0; i < qty; i++) cart.addItem(product);
+    cart.addItem(product);
     setAdded(true);
     setTimeout(() => setAdded(false), 1500);
+  }
+
+  function handleRemove() {
+    cart.updateQuantity(product.id, inCart - 1);
   }
 
   return (
@@ -240,11 +265,11 @@ export function ProductDetailPage({ product, setPage, primaryColor }: {
       <p className="text-2xl font-bold mb-6" style={{ color: primaryColor }}>{formatPrice(product.price_cents)}</p>
 
       <div className="flex items-center gap-4 mb-6">
-        <span className="text-sm text-gray-500">Quantity</span>
-        <button onClick={() => setQty(Math.max(1, qty - 1))}
+        <span className="text-sm text-gray-500">In cart</span>
+        <button onClick={handleRemove}
           className="w-10 h-10 rounded-xl border border-gray-300 text-gray-600 font-bold text-lg">−</button>
-        <span className="text-lg font-bold w-6 text-center">{qty}</span>
-        <button onClick={() => setQty(qty + 1)}
+        <span className="text-lg font-bold w-6 text-center">{inCart}</span>
+        <button onClick={handleAdd}
           className="w-10 h-10 rounded-xl border border-gray-300 text-gray-600 font-bold text-lg">+</button>
       </div>
 
@@ -254,7 +279,7 @@ export function ProductDetailPage({ product, setPage, primaryColor }: {
           <button onClick={handleAdd}
             className="w-full py-4 text-white font-bold rounded-2xl text-lg shadow-lg active:scale-[0.98] transition-transform"
             style={{ backgroundColor: primaryColor }}>
-            Add {qty > 1 ? `${qty} items` : "to Cart"} · {formatPrice(product.price_cents * qty)}
+            Add to Cart · {formatPrice(product.price_cents)}
           </button>
         </div>
       </div>

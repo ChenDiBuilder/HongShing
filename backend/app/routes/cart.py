@@ -5,6 +5,7 @@ from sqlalchemy import select
 from app.database import AsyncSession, get_db
 from app.middleware.auth import require_customer
 from app.models import Cart, CartItem, User
+from app.models.menu import MenuItem
 
 router = APIRouter(prefix="/api", tags=["cart"])
 
@@ -33,25 +34,28 @@ async def get_cart(
         return {"cart": {"items": [], "subtotal_cents": 0, "item_count": 0}}
 
     items_result = await db.execute(
-        select(CartItem).where(CartItem.cart_id == cart.id)
+        select(CartItem, MenuItem.image_url)
+        .outerjoin(MenuItem, CartItem.menu_item_id == MenuItem.id)
+        .where(CartItem.cart_id == cart.id)
     )
-    items = items_result.scalars().all()
+    items = items_result.all()
 
-    subtotal = sum(i.price_cents * i.quantity for i in items)
-    count = sum(i.quantity for i in items)
+    subtotal = sum(i[0].price_cents * i[0].quantity for i in items)
+    count = sum(i[0].quantity for i in items)
 
     return {
         "cart": {
             "id": cart.id,
             "items": [
                 {
-                    "id": i.id,
-                    "menu_item_id": i.menu_item_id,
-                    "name": i.name,
-                    "price_cents": i.price_cents,
-                    "quantity": i.quantity,
+                    "id": item.id,
+                    "menu_item_id": item.menu_item_id,
+                    "name": item.name,
+                    "price_cents": item.price_cents,
+                    "image_url": img_url,
+                    "quantity": item.quantity,
                 }
-                for i in items
+                for item, img_url in items
             ],
             "subtotal_cents": subtotal,
             "item_count": count,

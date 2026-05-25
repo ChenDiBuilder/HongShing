@@ -2,13 +2,13 @@ import { useState, useEffect, useCallback } from "react";
 import QRCampaignsScreen from "./screens/QRCampaignsScreen";
 import RewardsScreen from "./screens/RewardsScreen";
 import CustomersScreen from "./screens/CustomersScreen";
-import NotificationsScreen from "./screens/NotificationsScreen";
 import SettingsScreen from "./screens/SettingsScreen";
 import DevicesScreen from "./screens/DevicesScreen";
 import ReservationSlotsScreen from "./screens/ReservationSlotsScreen";
 import OrdersScreen from "./screens/OrdersScreen";
+import { AnalyticsPanel } from "./components/AnalyticsPanel";
 
-type Page = "login" | "dashboard" | "qr-campaigns" | "rewards" | "customers" | "orders" | "notifications" | "settings" | "devices" | "reservation-slots";
+type Page = "login" | "dashboard" | "qr-campaigns" | "rewards" | "customers" | "orders" | "settings" | "devices" | "reservation-slots";
 
 const apiBase = import.meta.env.DEV ? "" : "/product-demo/hongshing";
 
@@ -31,6 +31,17 @@ function MetricCard({ label, value, onClick }: { label: string; value: string | 
   );
 }
 
+function Spinner({ label = "Loading..." }: { label?: string }) {
+  return (
+    <div className="flex items-center justify-center py-20">
+      <div className="text-center">
+        <div className="w-10 h-10 border-4 border-red-200 border-t-red-600 rounded-full animate-spin mx-auto mb-3" />
+        <p className="text-sm text-gray-400">{label}</p>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [page, setPage] = useState<Page>("login");
   const [email, setEmail] = useState("");
@@ -38,6 +49,8 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [dashboard, setDashboard] = useState<any>(null);
+  const [analytics, setAnalytics] = useState<any>(null);
+  const [dateRange, setDateRange] = useState("14");
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [ordersFilter, setOrdersFilter] = useState("");
 
@@ -48,7 +61,7 @@ export default function App() {
     try {
       const res = await fetch(`${apiBase}/api/admin/auth/login`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ email, password }) });
       if (!res.ok) throw new Error("Invalid credentials");
-      setPage("dashboard"); loadDashboard();
+      setPage("dashboard"); loadDashboard(); loadAnalytics();
     } catch { setError("Invalid email or password"); }
     finally { setLoading(false); }
   }
@@ -57,7 +70,11 @@ export default function App() {
     try { const r = await fetch(`${apiBase}/api/admin/dashboard`, { credentials: "include" }); const d = await r.json(); setDashboard(d.data); } catch {}
   }, []);
 
-  useEffect(() => { if (page === "dashboard") loadDashboard(); }, [page, loadDashboard]);
+  const loadAnalytics = useCallback(async () => {
+    try { const r = await fetch(`${apiBase}/api/admin/analytics?days=${dateRange}`, { credentials: "include" }); const d = await r.json(); setAnalytics(d.data); } catch {}
+  }, [dateRange]);
+
+  useEffect(() => { if (page === "dashboard") { loadDashboard(); loadAnalytics(); } }, [page, loadDashboard, loadAnalytics]);
 
   function navigateTo(key: Page, filter?: string) {
     setPage(key);
@@ -88,7 +105,6 @@ export default function App() {
     { key: "rewards", label: "Loyalty Rewards" },
     { key: "devices", label: "Devices & Kiosks" },
     { key: "reservation-slots", label: "Reservation Slots" },
-    { key: "notifications", label: "Send Notifications" },
     { key: "settings", label: "Restaurant Settings" },
   ];
 
@@ -107,18 +123,32 @@ export default function App() {
       <main className="flex-1 p-8">
         {page === "dashboard" && (
           <div>
-            <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
-            <p className="text-sm text-gray-500 mb-8">Click any card to drill into details</p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <MetricCard label="Total Customers" value={dashboard?.total_customers ?? 0} onClick={() => navigateTo("customers")} />
-              <MetricCard label="Active Campaigns" value={dashboard?.active_campaigns ?? 0} onClick={() => navigateTo("qr-campaigns")} />
-              <MetricCard label="Rewards Issued" value={dashboard?.issued_rewards ?? 0} onClick={() => navigateTo("rewards")} />
-              <MetricCard label="Total Signups" value={dashboard?.total_signups ?? 0} onClick={() => navigateTo("customers")} />
-              <MetricCard label="Rewards Redeemed" value={dashboard?.redeemed_rewards ?? 0} onClick={() => navigateTo("rewards")} />
-              <MetricCard label="Total Rewards" value={dashboard?.total_rewards ?? 0} onClick={() => navigateTo("rewards")} />
-              <MetricCard label="Total Orders" value={dashboard?.total_orders ?? 0} onClick={() => navigateTo("orders")} />
-              <MetricCard label="Pending Orders" value={dashboard?.confirmed_orders ?? 0} onClick={() => { setOrdersFilter("confirmed"); navigateTo("orders"); }} />
+            <div className="flex items-center justify-between mb-6">
+              <h1 className="text-3xl font-bold">Dashboard</h1>
+              <select
+                value={dateRange}
+                onChange={(e) => setDateRange(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-red-500">
+                <option value="7">Last 7 days</option>
+                <option value="14">Last 14 days</option>
+                <option value="30">Last 30 days</option>
+                <option value="90">Last 90 days</option>
+              </select>
             </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
+              <MetricCard label="Scans Today" value={dashboard?.scans_today ?? 0} />
+              <MetricCard label="Signups Today" value={dashboard?.signups_today ?? 0} />
+              <MetricCard label="Redirects Today" value={dashboard?.redirects_today ?? 0} />
+              <MetricCard label="Orders Today" value={analytics?.summary?.today?.orders ?? 0} />
+              <MetricCard label="Revenue Today" value={`$${((analytics?.summary?.today?.revenue_cents ?? 0) / 100).toFixed(2)}`} />
+              <MetricCard label="SMS Opt-in" value={`${dashboard?.sms_opt_in_rate ?? 0}%`} />
+            </div>
+
+            {!analytics ? (
+              <div className="mt-10"><Spinner label="Loading analytics..." /></div>
+            ) : (
+              <AnalyticsPanel data={analytics} />
+            )}
           </div>
         )}
         {page === "customers" && <CustomersScreen />}
@@ -127,7 +157,6 @@ export default function App() {
         {page === "rewards" && <RewardsScreen showToast={showToast} />}
         {page === "devices" && <DevicesScreen showToast={showToast} />}
         {page === "reservation-slots" && <ReservationSlotsScreen showToast={showToast} />}
-        {page === "notifications" && <NotificationsScreen showToast={showToast} />}
         {page === "settings" && <SettingsScreen showToast={showToast} />}
       </main>
       {toast && <Toast message={toast.message} type={toast.type} onDismiss={() => setToast(null)} />}

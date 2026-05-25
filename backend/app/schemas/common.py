@@ -27,6 +27,9 @@ class SendOTPRequest(BaseModel):
 class VerifyOTPRequest(BaseModel):
     phone: str = Field(..., min_length=10, max_length=15)
     code: str = Field(..., min_length=6, max_length=6)
+    source_code: str | None = None
+    campaign_id: str | None = None
+    marketing_opt_in: bool = False
 
     @field_validator("phone", mode="before")
     @classmethod

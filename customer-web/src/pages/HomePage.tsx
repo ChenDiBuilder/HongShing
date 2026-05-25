@@ -7,6 +7,7 @@ interface Props {
   campaign?: { landing_headline?: string; landing_subtitle?: string } | null;
   setPage: (p: any) => void;
   loadMenu: () => void;
+  onClaimReward: () => void;
 }
 
 function todayHours() {
@@ -15,7 +16,7 @@ function todayHours() {
   return RESTAURANT_INFO.hours[today as keyof typeof RESTAURANT_INFO.hours] || "Hours unavailable";
 }
 
-export function HomePage({ primaryColor, logoUrl, secondaryColor: _, campaign, setPage, loadMenu }: Props) {
+export function HomePage({ primaryColor, logoUrl, secondaryColor: _, campaign, setPage, loadMenu, onClaimReward }: Props) {
   const headline = campaign?.landing_headline || "Order Pickup & Earn Rewards";
   const subtitle = campaign?.landing_subtitle || "Browse our menu, order ahead, and claim exclusive rewards — all from Hong Shing.";
 
@@ -46,7 +47,7 @@ export function HomePage({ primaryColor, logoUrl, secondaryColor: _, campaign, s
             style={{ borderColor: primaryColor, color: primaryColor }}>
             View Menu
           </button>
-          <button onClick={() => setPage("landing")}
+          <button onClick={onClaimReward}
             className="w-full py-3 font-semibold rounded-xl text-base border border-gray-300 text-gray-700 active:scale-[0.98] transition-transform">
             Claim My Reward
           </button>
