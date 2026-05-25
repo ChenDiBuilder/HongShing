@@ -1,6 +1,7 @@
 """QR campaign admin CRUD routes."""
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy import select
 
 from app.database import AsyncSession, get_db
@@ -8,6 +9,14 @@ from app.middleware.auth import require_admin
 from app.models import QRCampaign, User
 
 router = APIRouter()
+
+
+class CreateCampaignRequest(BaseModel):
+    name: str
+    source_code: str
+    landing_headline: str | None = None
+    landing_subtitle: str | None = None
+    reward_template_id: str | None = None
 
 
 @router.get("/qr-campaigns")
@@ -23,7 +32,6 @@ async def list_campaigns(
                 "id": c.id,
                 "name": c.name,
                 "source_code": c.source_code,
-                "description": c.description,
                 "landing_headline": c.landing_headline,
                 "landing_subtitle": c.landing_subtitle,
                 "active": c.active,
@@ -36,22 +44,16 @@ async def list_campaigns(
 
 @router.post("/qr-campaigns")
 async def create_campaign(
-    name: str,
-    source_code: str,
-    description: str | None = None,
-    landing_headline: str | None = None,
-    landing_subtitle: str | None = None,
-    reward_template_id: str | None = None,
+    body: CreateCampaignRequest,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_admin(["owner", "manager"])),
 ):
     campaign = QRCampaign(
-        name=name,
-        source_code=source_code,
-        description=description,
-        landing_headline=landing_headline,
-        landing_subtitle=landing_subtitle,
-        reward_template_id=reward_template_id,
+        name=body.name,
+        source_code=body.source_code,
+        landing_headline=body.landing_headline,
+        landing_subtitle=body.landing_subtitle,
+        reward_template_id=body.reward_template_id,
         created_by=current_user.id,
         active=True,
     )

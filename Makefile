@@ -97,7 +97,12 @@ build-frontend: ## Build customer-web SPA into customer-web/dist/
 	@cd customer-web && npm ci --silent && npm run build
 	@printf "  ✓ customer-web/dist/ ready\n"
 
-build: build-backend build-frontend ## Build both backend and frontend
+build-admin: ## Build admin SPA into admin/dist/
+	@printf "\033[0;32m=== Building admin ===\033[0m\n"
+	@cd admin && npm ci --silent && npm run build
+	@printf "  ✓ admin/dist/ ready\n"
+
+build: build-backend build-frontend build-admin ## Build backend, frontend, and admin
 
 ##@ Deploy
 ##   make deploy
@@ -129,7 +134,19 @@ deploy-frontend: build-frontend ## Deploy SPA to S3 + invalidate CloudFront
 		aws cloudfront create-invalidation --distribution-id $$DIST --paths "/product-demo/hongshing/*" >/dev/null; \
 		printf "  ✓ CloudFront cache invalidated\n"; fi
 
-deploy: push-backend deploy-frontend ## Deploy backend + frontend to AWS
+deploy-admin: build-admin ## Deploy admin SPA to S3 + invalidate CloudFront
+	@printf "\033[0;32m=== Deploying admin ===\033[0m\n"
+	@BUCKET=$$(cd $(TF_DIR) && terraform output -raw s3_frontend_bucket 2>/dev/null); \
+	DIST=$$(cd $(TF_DIR) && terraform output -raw cloudfront_distribution_id 2>/dev/null); \
+	if [ -z "$$BUCKET" ]; then \
+		printf "\033[0;31m✗ No S3 bucket — run 'make infra' first\033[0m\n"; exit 1; fi; \
+	aws s3 sync admin/dist/ s3://$$BUCKET/product-demo/hongshing-admin/ --delete --quiet; \
+	printf "  ✓ Synced to s3://$$BUCKET/product-demo/hongshing-admin/\n"; \
+	if [ -n "$$DIST" ]; then \
+		aws cloudfront create-invalidation --distribution-id $$DIST --paths "/product-demo/hongshing-admin/*" >/dev/null; \
+		printf "  ✓ CloudFront cache invalidated\n"; fi
+
+deploy: push-backend deploy-frontend deploy-admin ## Deploy backend + frontend + admin to AWS
 
 ##@ Database
 ##   make migrate  (after infra + build + deploy)

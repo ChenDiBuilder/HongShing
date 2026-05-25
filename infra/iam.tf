@@ -31,7 +31,6 @@ resource "aws_iam_role_policy" "ecs_secrets" {
         Effect   = "Allow"
         Action   = ["secretsmanager:GetSecretValue"]
         Resource = [
-          aws_secretsmanager_secret.database.arn,
           aws_secretsmanager_secret.app.arn,
         ]
       }

@@ -1,11 +1,15 @@
 import { useState, useEffect } from "react";
 
-export default function SettingsScreen() {
+const apiBase = import.meta.env.DEV ? "" : "/product-demo/hongshing";
+
+interface Props { showToast: (msg: string, type?: "success" | "error") => void; }
+
+export default function SettingsScreen({ showToast }: Props) {
   const [settings, setSettings] = useState<any>({});
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    fetch("/api/admin/settings", { credentials: "include" })
+    fetch(`${apiBase}/api/admin/settings`, { credentials: "include" })
       .then((r) => r.json())
       .then((d) => setSettings(d.data || {}));
   }, []);
@@ -21,11 +25,11 @@ export default function SettingsScreen() {
     if (settings.privacy_contact_email) params.append("privacy_contact_email", settings.privacy_contact_email);
     if (settings.support_phone) params.append("support_phone", settings.support_phone);
 
-    const r = await fetch(`/api/admin/settings?${params}`, {
+    const r = await fetch(`${apiBase}/api/admin/settings?${params}`, {
       method: "PATCH",
       credentials: "include",
     });
-    if (r.ok) setSaved(true);
+    if (r.ok) { setSaved(true); showToast("Settings saved!", "success"); }
   }
 
   return (

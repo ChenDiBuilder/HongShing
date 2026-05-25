@@ -67,6 +67,14 @@ resource "aws_cloudfront_function" "strip_api_prefix" {
   publish = true
 }
 
+# CloudFront Function — append index.html to directory paths for S3
+resource "aws_cloudfront_function" "directory_index" {
+  name    = "${var.app_name}-directory-index-${var.environment}"
+  runtime = "cloudfront-js-2.0"
+  code    = file("${path.module}/cloudfront_directory_index.js")
+  publish = true
+}
+
 # CloudFront distribution (default *.cloudfront.net cert — no custom domain needed)
 resource "aws_cloudfront_distribution" "main" {
   origin {
@@ -76,7 +84,7 @@ resource "aws_cloudfront_distribution" "main" {
   }
 
   origin {
-    domain_name = aws_lb.main.dns_name
+    domain_name = data.aws_lb.vela.dns_name
     origin_id   = "ALB-${var.app_name}"
 
     custom_origin_config {
@@ -105,6 +113,11 @@ resource "aws_cloudfront_distribution" "main" {
         forward = "none"
       }
     }
+
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = aws_cloudfront_function.directory_index.arn
+    }
   }
 
   # API proxy at /product-demo/hongshing/api/*
@@ -116,8 +129,8 @@ resource "aws_cloudfront_distribution" "main" {
     cached_methods         = ["GET", "HEAD"]
 
     forwarded_values {
-      query_string = false
-      headers      = ["Origin", "Authorization", "Content-Type"]
+      query_string = true
+      headers      = ["Origin", "Authorization", "Content-Type", "Host"]
       cookies {
         forward = "all"
       }

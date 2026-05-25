@@ -5,7 +5,6 @@ from sqlalchemy import select, func
 from app.database import AsyncSession, get_db
 from app.middleware.auth import require_customer
 from app.models import Order, OrderItem, User
-from app.models.menu import MenuItem
 
 router = APIRouter()
 
@@ -19,6 +18,21 @@ class OrderItemRequest(BaseModel):
 
 class CreateOrderRequest(BaseModel):
     items: list[OrderItemRequest]
+
+
+def _format_order(order: Order, items: list[OrderItem]) -> dict:
+    return {
+        "id": order.id,
+        "total_cents": order.total_cents,
+        "item_count": order.item_count,
+        "status": order.status,
+        "created_at": order.created_at.isoformat(),
+        "updated_at": order.updated_at.isoformat(),
+        "items": [
+            {"name": i.name, "price_cents": i.price_cents, "quantity": i.quantity}
+            for i in items
+        ],
+    }
 
 
 @router.post("/api/orders")
@@ -81,21 +95,25 @@ async def my_orders(
             select(OrderItem).where(OrderItem.order_id == order.id)
         )
         items = items_result.scalars().all()
-        data.append(
-            {
-                "id": order.id,
-                "total_cents": order.total_cents,
-                "item_count": order.item_count,
-                "status": order.status,
-                "created_at": order.created_at.isoformat(),
-                "items": [
-                    {
-                        "name": i.name,
-                        "price_cents": i.price_cents,
-                        "quantity": i.quantity,
-                    }
-                    for i in items
-                ],
-            }
-        )
+        data.append(_format_order(order, items))
     return {"orders": data}
+
+
+@router.get("/api/customer/me/orders/{order_id}")
+async def get_order(
+    order_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_customer),
+):
+    result = await db.execute(
+        select(Order).where(Order.id == order_id, Order.user_id == current_user.id)
+    )
+    order = result.scalar_one_or_none()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    items_result = await db.execute(
+        select(OrderItem).where(OrderItem.order_id == order.id)
+    )
+    items = items_result.scalars().all()
+    return {"order": _format_order(order, items)}

@@ -1,8 +1,4 @@
 function handler(event) {
-    var request = event.request;
-    var prefix = "/product-demo/hongshing";
-    if (request.uri.startsWith(prefix + "/api/")) {
-        request.uri = request.uri.substring(prefix.length);
-    }
-    return request;
+    // Keep the /product-demo/hongshing prefix so the ALB can route by path
+    return event.request;
 }

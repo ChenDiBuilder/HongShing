@@ -71,10 +71,60 @@ async def _reset_owner(email: str, new_password: str):
 
 
 @cli.command()
-def seed_menu():
+@click.option("--force", is_flag=True, help="Force re-seed (clears existing menu)")
+def seed_menu(force: bool = False):
     """Seed the database with the HongShing menu."""
     from app.cli.seed_menu import seed_menu as _seed
-    asyncio.run(_seed())
+    asyncio.run(_seed(force=force))
+
+
+@cli.command()
+@click.option("--keep-admin/--no-keep-admin", default=True)
+@click.confirmation_option(prompt="This will delete all test data (customers, orders, reservations, devices). Continue?")
+def reset_demo(keep_admin: bool):
+    """Reset demo data — delete test customers, orders, reservations, and devices."""
+    asyncio.run(_reset_demo(keep_admin))
+
+
+async def _reset_demo(keep_admin: bool):
+    from sqlalchemy import delete, text
+
+    async with async_session() as session:
+        tables = [
+            "order_status_events",
+            "order_items",
+            "orders",
+            "reservations",
+            "signup_events",
+            "qr_scan_events",
+            "rewards",
+            "external_order_redirects",
+            "user_notification_preferences",
+            "refresh_tokens",
+            "otp_codes",
+            "otp_rate_limits",
+            "test_sms_messages",
+            "devices",
+        ]
+        for table in tables:
+            await session.execute(text(f"DELETE FROM {table}"))
+            click.echo(f"  Cleared {table}")
+
+        if keep_admin:
+            await session.execute(
+                text("DELETE FROM users WHERE role = 'customer'")
+            )
+            click.echo("  Deleted customer users (kept admin accounts)")
+        else:
+            await session.execute(text("DELETE FROM users"))
+            click.echo("  Deleted ALL users")
+
+        # Clear reservation slots
+        await session.execute(text("DELETE FROM reservation_slots"))
+        click.echo("  Cleared reservation_slots")
+
+        await session.commit()
+        click.echo("Demo data reset complete.")
 
 
 if __name__ == "__main__":

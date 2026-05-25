@@ -1,32 +1,21 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const CF = "https://d1qkx0vmdo9wnw.cloudfront.net";
+
 export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: false,
   retries: 0,
   workers: 1,
-  timeout: 30000,
+  timeout: 90000,
   use: {
     trace: "on-first-retry",
+    baseURL: CF,
   },
   projects: [
     {
-      name: "chromium",
-      use: {
-        ...devices["Desktop Chrome"],
-        baseURL: "http://localhost:3500",
-      },
-    },
-    {
-      name: "chromium-admin",
-      use: {
-        ...devices["Desktop Chrome"],
-        baseURL: "http://localhost:3501",
-      },
+      name: "production",
+      use: { ...devices["Desktop Chrome"] },
     },
   ],
-  // Servers must be started manually:
-  // Backend:   cd backend && APP_ENV=testing python -m uvicorn app.main:app --port 8500
-  // Customer:  cd customer-web && npm run dev
-  // Admin:     cd admin && npm run dev
 });

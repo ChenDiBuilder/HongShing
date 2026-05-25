@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
 
-export default function NotificationsScreen() {
+const apiBase = import.meta.env.DEV ? "" : "/product-demo/hongshing";
+
+interface Props { showToast: (msg: string, type?: "success" | "error") => void; }
+
+export default function NotificationsScreen({ showToast: _ }: Props) {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [recipientId, setRecipientId] = useState("");
   const [body, setBody] = useState("");
@@ -8,7 +12,7 @@ export default function NotificationsScreen() {
   const [sent, setSent] = useState(false);
 
   useEffect(() => {
-    fetch("/api/admin/notifications", { credentials: "include" })
+    fetch(`${apiBase}/api/admin/notifications`, { credentials: "include" })
       .then((r) => r.json())
       .then((d) => setNotifications(d.data || []));
   }, []);
@@ -18,7 +22,7 @@ export default function NotificationsScreen() {
     setSent(false);
     const params = new URLSearchParams({ body, message_type: messageType });
     if (recipientId) params.append("recipient_id", recipientId);
-    const r = await fetch(`/api/admin/notifications/sms?${params}`, {
+    const r = await fetch(`${apiBase}/api/admin/notifications/sms?${params}`, {
       method: "POST",
       credentials: "include",
     });

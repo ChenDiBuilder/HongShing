@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 
+const apiBase = import.meta.env.DEV ? "" : "/product-demo/hongshing";
+
 interface RewardTemplate {
   id: string;
   name: string;
@@ -17,7 +19,9 @@ interface Reward {
   issued_at: string;
 }
 
-export default function RewardsScreen() {
+interface Props { showToast: (msg: string, type?: "success" | "error") => void; }
+
+export default function RewardsScreen({ showToast }: Props) {
   const [templates, setTemplates] = useState<RewardTemplate[]>([]);
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [tab, setTab] = useState<"templates" | "issued">("templates");
@@ -27,37 +31,46 @@ export default function RewardsScreen() {
   const [validDays, setValidDays] = useState(30);
 
   useEffect(() => {
-    fetch("/api/admin/reward-templates", { credentials: "include" })
+    fetch(`${apiBase}/api/admin/reward-templates`, { credentials: "include" })
       .then((r) => r.json())
       .then((d) => setTemplates(d.data || []));
-    fetch("/api/admin/rewards", { credentials: "include" })
+    fetch(`${apiBase}/api/admin/rewards`, { credentials: "include" })
       .then((r) => r.json())
       .then((d) => setRewards(d.data || []));
   }, []);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
-    const params = new URLSearchParams({
-      name,
-      reward_type: rewardType,
-      reward_value: String(value),
-      valid_days: String(validDays),
-    });
-    await fetch(`/api/admin/reward-templates?${params}`, {
+    const r = await fetch(`${apiBase}/api/admin/reward-templates`, {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       credentials: "include",
+      body: JSON.stringify({ name, reward_type: rewardType, reward_value: value, valid_days: validDays }),
     });
-    setName("");
-    const r = await fetch("/api/admin/reward-templates", { credentials: "include" });
+    if (r.ok) {
+      setName(""); setValue(500); setValidDays(30);
+      const t = await fetch(`${apiBase}/api/admin/reward-templates`, { credentials: "include" });
+      setTemplates((await t.json()).data || []);
+      showToast("Template created!", "success");
+    } else {
+      showToast("Failed to create template", "error");
+    }
+  }
+
+  async function handleDelete(templateId: string) {
+    if (!confirm("Deactivate this template?")) return;
+    await fetch(`${apiBase}/api/admin/reward-templates/${templateId}`, { method: "DELETE", credentials: "include" });
+    const r = await fetch(`${apiBase}/api/admin/reward-templates`, { credentials: "include" });
     setTemplates((await r.json()).data || []);
+    showToast("Template deactivated", "success");
   }
 
   async function handleRedeem(rewardId: string) {
-    await fetch(`/api/admin/rewards/${rewardId}/redeem`, {
+    await fetch(`${apiBase}/api/admin/rewards/${rewardId}/redeem`, {
       method: "PATCH",
       credentials: "include",
     });
-    const r = await fetch("/api/admin/rewards", { credentials: "include" });
+    const r = await fetch(`${apiBase}/api/admin/rewards`, { credentials: "include" });
     setRewards((await r.json()).data || []);
   }
 
@@ -90,7 +103,7 @@ export default function RewardsScreen() {
                 <option value="fixed">Fixed ($)</option>
                 <option value="percentage">Percentage (%)</option>
               </select>
-              <input type="number" value={value} onChange={(e) => setValue(Number(e.target.value))} placeholder="Value (cents or %)" className="px-3 py-2 border rounded-lg" />
+              <input type="number" value={value} onChange={(e) => setValue(Number(e.target.value))} placeholder="Value in cents (500 = $5.00)" className="px-3 py-2 border rounded-lg" />
               <input type="number" value={validDays} onChange={(e) => setValidDays(Number(e.target.value))} placeholder="Valid days" className="px-3 py-2 border rounded-lg" />
             </div>
             <button type="submit" className="px-4 py-2 bg-red-600 text-white rounded-lg">Create</button>
@@ -98,13 +111,14 @@ export default function RewardsScreen() {
 
           <div className="bg-white rounded-xl shadow-sm">
             <table className="w-full">
-              <thead><tr className="border-b text-left text-sm text-gray-500"><th className="p-4">Name</th><th className="p-4">Type</th><th className="p-4">Value</th><th className="p-4">Valid Days</th><th className="p-4">Active</th></tr></thead>
+              <thead><tr className="border-b text-left text-sm text-gray-500"><th className="p-4">Name</th><th className="p-4">Type</th><th className="p-4">Value</th><th className="p-4">Valid Days</th><th className="p-4">Active</th><th className="p-4">Actions</th></tr></thead>
               <tbody>
                 {templates.map((t) => (
                   <tr key={t.id} className="border-b">
                     <td className="p-4">{t.name}</td><td className="p-4">{t.reward_type}</td>
                     <td className="p-4">{t.reward_type === "fixed" ? `$${(t.reward_value / 100).toFixed(2)}` : `${t.reward_value}%`}</td>
                     <td className="p-4">{t.valid_days}</td><td className="p-4">{t.active ? "✅" : "—"}</td>
+                    <td className="p-4"><button onClick={() => handleDelete(t.id)} className="text-sm text-red-600 hover:underline">Delete</button></td>
                   </tr>
                 ))}
               </tbody>

@@ -1,6 +1,7 @@
 """Reward template and reward admin routes."""
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy import func, select
 
 from app.database import AsyncSession, get_db
@@ -8,6 +9,13 @@ from app.middleware.auth import require_admin
 from app.models import Reward, RewardTemplate, User
 
 router = APIRouter()
+
+
+class CreateTemplateRequest(BaseModel):
+    name: str
+    reward_type: str = "fixed"
+    reward_value: int = 500
+    valid_days: int = 30
 
 
 # --- Reward Templates ---
@@ -39,23 +47,16 @@ async def list_templates(
 
 @router.post("/reward-templates")
 async def create_template(
-    name: str,
-    reward_type: str = "fixed",
-    reward_value: int = 500,
-    valid_days: int = 30,
-    min_order_cents: int | None = None,
-    max_uses_per_user: int = 1,
+    body: CreateTemplateRequest,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_admin(["owner", "manager"])),
 ):
     template = RewardTemplate(
-        name=name,
+        name=body.name,
         code_prefix="HS",
-        reward_type=reward_type,
-        reward_value=reward_value,
-        valid_days=valid_days,
-        min_order_cents=min_order_cents,
-        max_uses_per_user=max_uses_per_user,
+        reward_type=body.reward_type,
+        reward_value=body.reward_value,
+        valid_days=body.valid_days,
     )
     db.add(template)
     await db.commit()
@@ -88,6 +89,21 @@ async def update_template(
         template.valid_days = valid_days
     if active is not None:
         template.active = active
+    await db.commit()
+    return {"ok": True}
+
+
+@router.delete("/reward-templates/{template_id}")
+async def delete_template(
+    template_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_admin(["owner", "manager"])),
+):
+    result = await db.execute(select(RewardTemplate).where(RewardTemplate.id == template_id))
+    template = result.scalar_one_or_none()
+    if not template:
+        raise HTTPException(status_code=404, detail="Not found")
+    template.active = False
     await db.commit()
     return {"ok": True}
 

@@ -1,73 +1,46 @@
-# React + TypeScript + Vite
+# Customer Web
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Customer-facing mobile web app for HongShing restaurant ordering and reservation system.
 
-Currently, two official plugins are available:
+**URL:** https://d1qkx0vmdo9wnw.cloudfront.net/product-demo/hongshing/
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Quick Start
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev     # http://localhost:3500
+npm run build   # production build to dist/
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Architecture
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- **Vite 8** + React 19 + TypeScript 6
+- **Tailwind CSS 4** via `@tailwindcss/vite`
+- **State-based routing** (no react-router) — pages switch via `useState<Page>`
+- **DB-backed cart** — cart items persist across sessions via `/api/cart`
+- **10-second polling** for order status updates
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## File Structure
+
 ```
+src/
+├── App.tsx              # Thin router (~145 lines)
+├── types.ts             # Shared types, emoji map, formatPrice
+├── main.tsx             # React entry point
+├── index.css            # Tailwind imports
+├── context/
+│   ├── api.ts           # API base path helper
+│   └── CartContext.tsx  # Cart state (DB-backed via /api/cart)
+├── components/
+│   └── Header.tsx       # Header + Footer
+└── pages/
+    ├── AuthPages.tsx     # Landing, OTP verify, Reward
+    ├── MenuPage.tsx      # Menu grid + Product detail
+    ├── CartPage.tsx      # Cart view + Place Order
+    ├── OrderPages.tsx    # Order confirmation, tracking, rewards
+    └── ReservationPage.tsx # Reservations, Terms, Privacy
+```
+
+## Dev Proxy
+
+Vite dev server proxies `/api` to `http://localhost:8001` (backend). In production, the app is served from CloudFront at `/product-demo/hongshing/` and API calls go through CloudFront's API proxy.

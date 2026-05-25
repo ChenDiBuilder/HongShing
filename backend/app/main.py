@@ -1,7 +1,8 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 
 from app.config import get_settings
 
@@ -21,9 +22,16 @@ from app.routes import (
     redirects,
     tracking,
 )
-from app.routes.test_routes import router as test_router
 from app.routes.menu import router as menu_router
 from app.routes.orders import router as orders_router
+from app.routes.storefront_auth import router as storefront_auth_router
+from app.routes.storefront_orders import router as storefront_orders_router
+from app.routes.storefront_reservations import router as storefront_reservations_router
+from app.routes.admin_devices import router as admin_devices_router
+from app.routes.admin_reservation_slots import router as admin_reservation_slots_router
+from app.routes.admin_orders import router as admin_orders_router
+from app.routes.reservations import router as reservations_router
+from app.routes.cart import router as cart_router
 
 
 @asynccontextmanager
@@ -31,8 +39,21 @@ async def lifespan(app: FastAPI):
     try:
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+            try:
+                await conn.execute(text("ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS tags text[]"))
+            except Exception:
+                pass
+            try:
+                await conn.execute(text("ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS popular boolean DEFAULT false"))
+            except Exception:
+                pass
     except Exception:
         pass
+
+    from app.services.sms_service import _check_sms_capability
+
+    _check_sms_capability()
+
     yield
     await engine.dispose()
 
@@ -50,6 +71,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+DEMO_PREFIX = "/product-demo/hongshing"
+
+
+@app.middleware("http")
+async def strip_demo_prefix(request: Request, call_next):
+    if request.url.path.startswith(DEMO_PREFIX):
+        request.scope["path"] = request.url.path[len(DEMO_PREFIX):]
+        request.scope["root_path"] = DEMO_PREFIX
+    return await call_next(request)
 
 # Auth
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
@@ -70,14 +101,27 @@ app.include_router(admin_rewards.router, prefix="/api/admin", tags=["admin-rewar
 app.include_router(admin_customers.router, prefix="/api/admin", tags=["admin-customers"])
 app.include_router(admin_settings.router, prefix="/api/admin", tags=["admin-settings"])
 
-# Test
-app.include_router(test_router)
-
 # Menu
 app.include_router(menu_router)
 
 # Orders
 app.include_router(orders_router)
+
+# Storefront
+app.include_router(storefront_auth_router)
+app.include_router(storefront_orders_router)
+app.include_router(storefront_reservations_router)
+
+# Admin — Devices & Reservation Slots
+app.include_router(admin_devices_router)
+app.include_router(admin_reservation_slots_router)
+app.include_router(admin_orders_router, prefix="/api/admin", tags=["admin-orders"])
+
+# Reservations (customer)
+app.include_router(reservations_router)
+
+# Cart (customer)
+app.include_router(cart_router)
 
 
 @app.get("/api/health")

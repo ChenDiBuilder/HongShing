@@ -7,6 +7,7 @@ from app.database import AsyncSession, get_db
 from app.middleware.auth import require_admin
 from app.models import (
     ExternalOrderRedirect,
+    Order,
     Reward,
     SignupEvent,
     User,
@@ -76,6 +77,12 @@ async def get_customer(
     )
     rewards = result.scalars().all()
 
+    # Orders
+    result = await db.execute(
+        select(Order).where(Order.user_id == customer_id).order_by(Order.created_at.desc()).limit(20)
+    )
+    orders = result.scalars().all()
+
     # Redirects
     result = await db.execute(
         select(ExternalOrderRedirect)
@@ -108,6 +115,16 @@ async def get_customer(
                     "issued_at": r.issued_at.isoformat(),
                 }
                 for r in rewards
+            ],
+            "orders": [
+                {
+                    "id": o.id,
+                    "total_cents": o.total_cents,
+                    "item_count": o.item_count,
+                    "status": o.status,
+                    "created_at": o.created_at.isoformat(),
+                }
+                for o in orders
             ],
             "redirects": [
                 {

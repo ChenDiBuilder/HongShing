@@ -138,13 +138,23 @@ terraform destroy
 
 ## Cost Estimate (Monthly)
 
-| Service | Approx Cost |
-|---------|------------|
-| RDS db.t4g.micro (20GB) | ~$25 |
-| ECS Fargate (0.5 vCPU, 1GB) | ~$30 |
-| ALB | ~$20 |
-| CloudFront + S3 | ~$5 |
-| Secrets Manager | ~$1 |
-| SNS (SMS) | Pay per message |
-| Route 53 | ~$0.50/zone |
-| **Total** | **~$80-100/month** |
+| Service | Approx Cost | Notes |
+|---------|------------|-------|
+| RDS db.t4g.micro (20GB) | ~$19 | $17 instance + $2 storage |
+| ECS Fargate (0.5 vCPU, 1GB) | ~$15 | Single task, always-on |
+| Application Load Balancer | ~$22 | One ALB, low traffic |
+| CloudFront + S3 | ~$1 | Minimal storage, free tier covers requests |
+| Secrets Manager | ~$1 | Two secrets |
+| SNS (SMS) | Pay per message | ~$0.01/msg in US |
+| **Total** | **~$58/month** | |
+
+### Savings applied
+
+| Removed | Saved | Reason |
+|---------|-------|--------|
+| NAT Gateway | **-$35/mo** | ECS now in public subnets. RDS stays in private — no outbound internet needed. |
+| ALB (future) | **-$22/mo** | Could replace with CloudFront VPC Origin direct to Fargate (requires later CloudFront update). |
+
+### Off-hours savings (not yet implemented)
+
+An EventBridge schedule to stop RDS (11pm-7am) and scale ECS to 0 would save ~$10/month more.

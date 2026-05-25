@@ -12,14 +12,16 @@ settings = get_settings()
 ALGORITHM = "HS256"
 
 
-def create_access_token(user_id: str, role: str) -> str:
-    expire = datetime.now(timezone.utc) + timedelta(minutes=15)
+def create_access_token(
+    user_id: str, role: str, token_type: str = "access", max_age: int = 900
+) -> str:
+    expire = datetime.now(timezone.utc) + timedelta(seconds=max_age)
     payload = {
         "sub": user_id,
         "role": role,
         "exp": expire,
         "iat": datetime.now(timezone.utc),
-        "type": "access",
+        "type": token_type,
     }
     return jwt.encode(payload, settings.secret_key, algorithm=ALGORITHM)
 

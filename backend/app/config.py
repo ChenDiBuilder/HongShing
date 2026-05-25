@@ -17,11 +17,15 @@ class Settings(BaseSettings):
     sqs_queue_url: str = ""
 
     sns_sender_id: str = "HongShing"
+    sns_origination_number: str = ""
 
     owner_email: str = "owner@hongshing.com"
 
     # OTP pepper for hashing phone/IP before storing in rate limit table
     otp_pepper: str = "change-me-in-production"
+
+    # Hardcoded OTP for development/testing — set to empty string to disable
+    hardcoded_otp: str = "111111"
 
 
 @lru_cache

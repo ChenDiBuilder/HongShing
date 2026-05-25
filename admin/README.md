@@ -1,73 +1,49 @@
-# React + TypeScript + Vite
+# Admin
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Restaurant back-office dashboard for managing customers, QR campaigns, rewards, devices, reservation slots, and notifications.
 
-Currently, two official plugins are available:
+**URL:** https://d1qkx0vmdo9wnw.cloudfront.net/product-demo/hongshing-admin/
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Quick Start
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev     # http://localhost:3501
+npm run build   # production build to dist/
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Credentials
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- Email: `owner@hongshing.com`
+- Password: `admin123`
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Architecture
+
+- **Vite 8** + React 19 + TypeScript 6
+- **Tailwind CSS 4** via `@tailwindcss/vite`
+- **State-based routing** — sidebar navigation with page state
+- **API auth** — admin JWT cookies (`admin_access_token`)
+
+## File Structure
+
 ```
+src/
+├── App.tsx              # Main app with sidebar nav
+├── main.tsx             # React entry point
+├── index.css            # Tailwind imports
+├── lib/
+│   └── api.ts           # Typed API wrappers
+└── screens/
+    ├── CustomersScreen.tsx
+    ├── DashboardScreen.tsx (inline in App.tsx)
+    ├── DevicesScreen.tsx
+    ├── NotificationsScreen.tsx
+    ├── QRCampaignsScreen.tsx
+    ├── ReservationSlotsScreen.tsx
+    ├── RewardsScreen.tsx
+    └── SettingsScreen.tsx
+```
+
+## Dev Proxy
+
+Vite dev server proxies `/api` to `http://localhost:8001`. In production, API calls go through CloudFront at `/product-demo/hongshing/api/admin/*`.

@@ -1,11 +1,35 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import QRCampaignsScreen from "./screens/QRCampaignsScreen";
 import RewardsScreen from "./screens/RewardsScreen";
 import CustomersScreen from "./screens/CustomersScreen";
 import NotificationsScreen from "./screens/NotificationsScreen";
 import SettingsScreen from "./screens/SettingsScreen";
+import DevicesScreen from "./screens/DevicesScreen";
+import ReservationSlotsScreen from "./screens/ReservationSlotsScreen";
+import OrdersScreen from "./screens/OrdersScreen";
 
-type Page = "login" | "dashboard" | "qr-campaigns" | "rewards" | "customers" | "notifications" | "settings";
+type Page = "login" | "dashboard" | "qr-campaigns" | "rewards" | "customers" | "orders" | "notifications" | "settings" | "devices" | "reservation-slots";
+
+const apiBase = import.meta.env.DEV ? "" : "/product-demo/hongshing";
+
+function Toast({ message, type, onDismiss }: { message: string; type: "success" | "error"; onDismiss: () => void }) {
+  useEffect(() => { const t = setTimeout(onDismiss, 3000); return () => clearTimeout(t); }, [onDismiss]);
+  return (
+    <div className={`fixed top-4 right-4 z-50 px-5 py-3 rounded-xl shadow-lg text-sm font-medium animate-[fadeIn_0.2s_ease-out] ${type === "success" ? "bg-green-600 text-white" : "bg-red-600 text-white"}`}>
+      {message}
+    </div>
+  );
+}
+
+function MetricCard({ label, value, onClick }: { label: string; value: string | number; onClick?: () => void }) {
+  return (
+    <div onClick={onClick} className={`bg-white rounded-xl shadow-sm p-6 ${onClick ? "cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all" : ""}`}>
+      <p className="text-sm text-gray-500">{label}</p>
+      <p className="text-3xl font-bold mt-1">{value}</p>
+      {onClick && <p className="text-xs text-red-500 mt-1 opacity-0 group-hover:opacity-100 hover:opacity-100">View →</p>}
+    </div>
+  );
+}
 
 export default function App() {
   const [page, setPage] = useState<Page>("login");
@@ -14,39 +38,31 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [dashboard, setDashboard] = useState<any>(null);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [ordersFilter, setOrdersFilter] = useState("");
+
+  const showToast = useCallback((message: string, type: "success" | "error" = "success") => { setToast({ message, type }); }, []);
 
   async function handleLogin(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
+    e.preventDefault(); setLoading(true); setError("");
     try {
-      const res = await fetch("/api/admin/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ email, password }),
-      });
+      const res = await fetch(`${apiBase}/api/admin/auth/login`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ email, password }) });
       if (!res.ok) throw new Error("Invalid credentials");
-      setPage("dashboard");
-      loadDashboard();
-    } catch {
-      setError("Invalid email or password");
-    } finally {
-      setLoading(false);
-    }
+      setPage("dashboard"); loadDashboard();
+    } catch { setError("Invalid email or password"); }
+    finally { setLoading(false); }
   }
 
-  async function loadDashboard() {
-    try {
-      const r = await fetch("/api/admin/dashboard", { credentials: "include" });
-      const d = await r.json();
-      setDashboard(d.data);
-    } catch {}
-  }
+  const loadDashboard = useCallback(async () => {
+    try { const r = await fetch(`${apiBase}/api/admin/dashboard`, { credentials: "include" }); const d = await r.json(); setDashboard(d.data); } catch {}
+  }, []);
 
-  useEffect(() => {
-    if (page === "dashboard") loadDashboard();
-  }, [page]);
+  useEffect(() => { if (page === "dashboard") loadDashboard(); }, [page, loadDashboard]);
+
+  function navigateTo(key: Page, filter?: string) {
+    setPage(key);
+    if (key === "orders" && filter) setOrdersFilter(filter);
+  }
 
   if (page === "login") {
     return (
@@ -54,17 +70,9 @@ export default function App() {
         <div className="w-full max-w-sm bg-white rounded-xl shadow-md p-8">
           <h1 className="text-2xl font-bold text-center mb-8">HongShing Admin</h1>
           <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500" required />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500" required />
-            </div>
-            <button type="submit" disabled={loading} className="w-full py-2 bg-red-600 text-white font-semibold rounded-lg disabled:opacity-50">
-              {loading ? "Signing in..." : "Sign In"}
-            </button>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Email</label><input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500" required /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Password</label><input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500" required /></div>
+            <button type="submit" disabled={loading} className="w-full py-2 bg-red-600 text-white font-semibold rounded-lg disabled:opacity-50">{loading ? "Signing in..." : "Sign In"}</button>
           </form>
           {error && <p className="text-red-500 text-sm text-center mt-4">{error}</p>}
         </div>
@@ -74,82 +82,55 @@ export default function App() {
 
   const navItems: { key: Page; label: string }[] = [
     { key: "dashboard", label: "Dashboard" },
-    { key: "customers", label: "Customers" },
-    { key: "qr-campaigns", label: "QR Campaigns" },
-    { key: "rewards", label: "Rewards" },
-    { key: "notifications", label: "Notifications" },
-    { key: "settings", label: "Settings" },
+    { key: "customers", label: "Customer Profiles" },
+    { key: "orders", label: "Order History" },
+    { key: "qr-campaigns", label: "QR & Campaigns" },
+    { key: "rewards", label: "Loyalty Rewards" },
+    { key: "devices", label: "Devices & Kiosks" },
+    { key: "reservation-slots", label: "Reservation Slots" },
+    { key: "notifications", label: "Send Notifications" },
+    { key: "settings", label: "Restaurant Settings" },
   ];
-
-  const nav = (
-    <aside className="w-64 bg-gray-900 text-white p-6 min-h-screen">
-      <h2 className="text-xl font-bold mb-8">HongShing</h2>
-      <nav className="space-y-1">
-        {navItems.map((item) => (
-          <button
-            key={item.key}
-            onClick={() => setPage(item.key)}
-            className={`block w-full text-left py-2 px-3 rounded ${page === item.key ? "bg-gray-800" : "hover:bg-gray-800"}`}
-          >
-            {item.label}
-          </button>
-        ))}
-      </nav>
-      <button onClick={() => setPage("login")} className="mt-8 text-sm text-gray-400 hover:text-white">
-        Sign Out
-      </button>
-    </aside>
-  );
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      {nav}
+      <aside className="w-64 bg-gray-900 text-white p-6 min-h-screen flex flex-col">
+        <h2 className="text-xl font-bold mb-8">HongShing</h2>
+        <nav className="space-y-1 flex-1">
+          {navItems.map(item => (
+            <button key={item.key} onClick={() => navigateTo(item.key)} className={`block w-full text-left py-2 px-3 rounded text-sm ${page === item.key ? "bg-gray-800 font-medium" : "hover:bg-gray-800 text-gray-300"}`}>{item.label}</button>
+          ))}
+        </nav>
+        <button onClick={() => setPage("login")} className="text-sm text-gray-500 hover:text-white">Sign Out</button>
+      </aside>
+
       <main className="flex-1 p-8">
         {page === "dashboard" && (
           <div>
-            <h1 className="text-3xl font-bold mb-8">Dashboard</h1>
+            <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
+            <p className="text-sm text-gray-500 mb-8">Click any card to drill into details</p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-white rounded-xl shadow-sm p-6">
-                <p className="text-sm text-gray-500">Total Customers</p>
-                <p className="text-3xl font-bold mt-1">{dashboard?.total_customers ?? 0}</p>
-              </div>
-              <div className="bg-white rounded-xl shadow-sm p-6">
-                <p className="text-sm text-gray-500">Active Campaigns</p>
-                <p className="text-3xl font-bold mt-1">{dashboard?.active_campaigns ?? 0}</p>
-              </div>
-              <div className="bg-white rounded-xl shadow-sm p-6">
-                <p className="text-sm text-gray-500">Rewards Issued</p>
-                <p className="text-3xl font-bold mt-1">{dashboard?.issued_rewards ?? 0}</p>
-              </div>
-              <div className="bg-white rounded-xl shadow-sm p-6">
-                <p className="text-sm text-gray-500">Total Signups</p>
-                <p className="text-3xl font-bold mt-1">{dashboard?.total_signups ?? 0}</p>
-              </div>
-              <div className="bg-white rounded-xl shadow-sm p-6">
-                <p className="text-sm text-gray-500">Rewards Redeemed</p>
-                <p className="text-3xl font-bold mt-1">{dashboard?.redeemed_rewards ?? 0}</p>
-              </div>
-              <div className="bg-white rounded-xl shadow-sm p-6">
-                <p className="text-sm text-gray-500">Total Rewards</p>
-                <p className="text-3xl font-bold mt-1">{dashboard?.total_rewards ?? 0}</p>
-              </div>
-              <div className="bg-white rounded-xl shadow-sm p-6">
-                <p className="text-sm text-gray-500">Total Orders</p>
-                <p className="text-3xl font-bold mt-1">{dashboard?.total_orders ?? 0}</p>
-              </div>
-              <div className="bg-white rounded-xl shadow-sm p-6">
-                <p className="text-sm text-gray-500">Pending Orders</p>
-                <p className="text-3xl font-bold mt-1">{dashboard?.confirmed_orders ?? 0}</p>
-              </div>
+              <MetricCard label="Total Customers" value={dashboard?.total_customers ?? 0} onClick={() => navigateTo("customers")} />
+              <MetricCard label="Active Campaigns" value={dashboard?.active_campaigns ?? 0} onClick={() => navigateTo("qr-campaigns")} />
+              <MetricCard label="Rewards Issued" value={dashboard?.issued_rewards ?? 0} onClick={() => navigateTo("rewards")} />
+              <MetricCard label="Total Signups" value={dashboard?.total_signups ?? 0} onClick={() => navigateTo("customers")} />
+              <MetricCard label="Rewards Redeemed" value={dashboard?.redeemed_rewards ?? 0} onClick={() => navigateTo("rewards")} />
+              <MetricCard label="Total Rewards" value={dashboard?.total_rewards ?? 0} onClick={() => navigateTo("rewards")} />
+              <MetricCard label="Total Orders" value={dashboard?.total_orders ?? 0} onClick={() => navigateTo("orders")} />
+              <MetricCard label="Pending Orders" value={dashboard?.confirmed_orders ?? 0} onClick={() => { setOrdersFilter("confirmed"); navigateTo("orders"); }} />
             </div>
           </div>
         )}
         {page === "customers" && <CustomersScreen />}
-        {page === "qr-campaigns" && <QRCampaignsScreen />}
-        {page === "rewards" && <RewardsScreen />}
-        {page === "notifications" && <NotificationsScreen />}
-        {page === "settings" && <SettingsScreen />}
+        {page === "orders" && <OrdersScreen statusFilter={ordersFilter} />}
+        {page === "qr-campaigns" && <QRCampaignsScreen showToast={showToast} />}
+        {page === "rewards" && <RewardsScreen showToast={showToast} />}
+        {page === "devices" && <DevicesScreen showToast={showToast} />}
+        {page === "reservation-slots" && <ReservationSlotsScreen showToast={showToast} />}
+        {page === "notifications" && <NotificationsScreen showToast={showToast} />}
+        {page === "settings" && <SettingsScreen showToast={showToast} />}
       </main>
+      {toast && <Toast message={toast.message} type={toast.type} onDismiss={() => setToast(null)} />}
     </div>
   );
 }
