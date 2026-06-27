@@ -1,0 +1,57 @@
+# HongShing — production stack for the single EC2 box.
+# Postgres + FastAPI backend + nginx (serves the 3 built SPAs and proxies /api).
+# Backend image is pulled from ECR (built/pushed by deploy.sh). Secrets come
+# from /opt/hongshing/.env. Run: docker compose -f docker-compose.prod.yml up -d
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: hongshing
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+      POSTGRES_DB: hongshing
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hongshing -d hongshing"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    image: ${BACKEND_IMAGE:?set BACKEND_IMAGE (ECR url:tag) in .env}
+    restart: unless-stopped
+    environment:
+      APP_ENV: production
+      DATABASE_URL: postgresql+asyncpg://hongshing:${DB_PASSWORD}@db:5432/hongshing
+      SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env}
+      OTP_PEPPER: ${OTP_PEPPER:?set OTP_PEPPER in .env}
+      # CRITICAL: blank in prod. A non-empty value lets anyone log in with that OTP.
+      HARDCODED_OTP: ""
+      CORS_ORIGINS: ${CORS_ORIGINS:?set CORS_ORIGINS in .env}
+      AWS_REGION: us-east-1
+      S3_BUCKET: ${S3_BUCKET:-hongshing-assets}
+      SNS_SENDER_ID: HongShing
+      SNS_ORIGINATION_NUMBER: ${SNS_ORIGINATION_NUMBER:-+12368645995}
+      # SMS-only region (out of sandbox + origination number live here); rest stays us-east-1.
+      SNS_REGION: ${SNS_REGION:-us-east-1}
+      OWNER_EMAIL: ${OWNER_EMAIL:-owner@hongshing.com}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - ./www:/usr/share/nginx/html:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:

@@ -63,3 +63,35 @@ variable "owner_email" {
   type        = string
   default     = "owner@hongshing.com"
 }
+
+# --- Cost control -----------------------------------------------------------
+
+variable "enable_business_hours_schedule" {
+  description = "Scale the backend to 0 outside business hours via EventBridge Scheduler"
+  type        = bool
+  default     = true
+}
+
+variable "schedule_timezone" {
+  description = "IANA timezone for the business-hours schedule (DST-aware)"
+  type        = string
+  default     = "America/Toronto"
+}
+
+variable "schedule_start_cron" {
+  description = "EventBridge cron to scale the service UP (start of business hours)"
+  type        = string
+  default     = "cron(0 9 * * ? *)" # 9:00am, every day
+}
+
+variable "schedule_stop_cron" {
+  description = "EventBridge cron to scale the service DOWN to 0 (end of business hours)"
+  type        = string
+  default     = "cron(0 15 * * ? *)" # 3:00pm, every day
+}
+
+variable "enable_container_insights" {
+  description = "Enable ECS Container Insights (extra CloudWatch cost). Off for the pilot."
+  type        = bool
+  default     = false
+}

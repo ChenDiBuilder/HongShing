@@ -3,7 +3,7 @@ resource "aws_ecs_cluster" "main" {
 
   setting {
     name  = "containerInsights"
-    value = "enabled"
+    value = var.enable_container_insights ? "enabled" : "disabled"
   }
 }
 
@@ -124,12 +124,19 @@ resource "aws_ecs_service" "backend" {
     container_port   = var.container_port
   }
 
-  force_new_deployment = true
+  force_new_deployment               = true
   deployment_maximum_percent         = 200
   deployment_minimum_healthy_percent = 100
 
   deployment_circuit_breaker {
     enable   = true
     rollback = true
+  }
+
+  # The business-hours scheduler (scheduler.tf) owns desired_count at runtime.
+  # Ignore drift so `terraform apply` doesn't scale the service back up when it
+  # runs while the service is intentionally scaled to 0 outside business hours.
+  lifecycle {
+    ignore_changes = [desired_count]
   }
 }
