@@ -26,7 +26,44 @@ REFRESH_TOKEN_MAX_AGE = 60 * 60 * 24 * 30
 
 
 @router.post("/send-otp", status_code=202)
-async def send_otp(body: SendOTPRequest):
+async def send_otp(body: SendOTPRequest, db: AsyncSession = Depends(get_db)):
+    import secrets
+
+    from app.models import OTPCode
+    from app.services.auth_service import hash_otp
+    from app.services.sms_service import send_sms
+
+    now = datetime.now(timezone.utc)
+
+    # Anti-abuse / SMS-cost control: 30s resend cooldown + max 5/hour per phone.
+    recent = await db.execute(
+        select(OTPCode)
+        .where(OTPCode.phone == body.phone, OTPCode.created_at > now - timedelta(hours=1))
+        .order_by(OTPCode.created_at.desc())
+    )
+    recent_rows = recent.scalars().all()
+    if recent_rows:
+        if (now - recent_rows[0].created_at).total_seconds() < 30:
+            raise HTTPException(status_code=429, detail="Please wait before requesting another code")
+        if len(recent_rows) >= 5:
+            raise HTTPException(status_code=429, detail="Too many code requests. Try again later.")
+
+    code = f"{secrets.randbelow(1_000_000):06d}"
+    db.add(
+        OTPCode(
+            phone=body.phone,
+            code_hash=hash_otp(code),
+            expires_at=now + timedelta(seconds=300),
+        )
+    )
+    await db.commit()
+
+    # Demo mode (hardcoded_otp set): verify-otp accepts the hardcoded code, so
+    # skip the real SMS send and its cost — the generated code is still stored.
+    # send_sms swallows SNS errors (sandbox/missing creds); the code is already
+    # persisted, so verify-otp works even when delivery is unavailable.
+    if not settings.hardcoded_otp:
+        send_sms(body.phone, f"Your HongShing verification code is {code}. It expires in 5 minutes.")
     return {"ok": True, "message": "OTP sent"}
 
 

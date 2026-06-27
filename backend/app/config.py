@@ -18,6 +18,10 @@ class Settings(BaseSettings):
 
     sns_sender_id: str = "HongShing"
     sns_origination_number: str = ""
+    # SMS-only region override. Empty -> aws_region. Set to the region where the
+    # SNS account is out of sandbox and the origination number lives (us-east-2),
+    # while the rest of the app (S3, instance) stays in aws_region (us-east-1).
+    sns_region: str = ""
 
     owner_email: str = "owner@hongshing.com"
 
