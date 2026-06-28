@@ -29,6 +29,9 @@ class RestaurantSettings(Base):
     timezone: Mapped[str] = mapped_column(String(50), default="America/Toronto")
     privacy_contact_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     support_phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    # Customer-facing base URL (e.g. https://yum.example.com) used to build reward
+    # short links — de-hardcodes the old hongshing.ca host. Seeded from identity.domain.
+    public_domain: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

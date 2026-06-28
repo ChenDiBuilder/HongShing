@@ -27,7 +27,7 @@ class TestCustomerProfile:
 class TestRewardClaim:
     async def test_claim_reward_with_default_template(self, client, customer_user, db_session):
         # Create settings with default template
-        settings = RestaurantSettings(id="00000000-0000-0000-0000-000000000001")
+        settings = RestaurantSettings(id="00000000-0000-0000-0000-000000000001", public_domain="https://hongshing.test")
         db_session.add(settings)
         template = RewardTemplate(name="Welcome $5", code_prefix="HS", reward_type="fixed", reward_value=500, valid_days=30)
         db_session.add(template)
@@ -46,7 +46,7 @@ class TestRewardClaim:
         assert data["short_link"] is not None
 
     async def test_claim_duplicate_returns_existing(self, client, customer_user, db_session):
-        settings = RestaurantSettings(id="00000000-0000-0000-0000-000000000001")
+        settings = RestaurantSettings(id="00000000-0000-0000-0000-000000000001", public_domain="https://hongshing.test")
         db_session.add(settings)
         template = RewardTemplate(name="Test", code_prefix="HS", reward_type="fixed", reward_value=500, valid_days=30)
         db_session.add(template)

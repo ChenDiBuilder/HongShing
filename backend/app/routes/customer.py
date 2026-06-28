@@ -139,13 +139,13 @@ async def claim_reward(
             short_link=None,
         )
 
-    # Generate unique code
-    code = generate_reward_code()
+    # Generate unique code with the template's per-restaurant prefix.
+    code = generate_reward_code(template.code_prefix)
     for _ in range(5):
         result = await db.execute(select(Reward).where(Reward.code == code))
         if not result.scalar_one_or_none():
             break
-        code = generate_reward_code()
+        code = generate_reward_code(template.code_prefix)
 
     expires_at = datetime.now(timezone.utc) + timedelta(days=template.valid_days)
 
@@ -200,11 +200,15 @@ async def claim_reward(
         await db.execute(select(Reward).where(Reward.id == new_id))
     ).scalar_one()
 
-    # Create short link
-    short_code = code[3:].lower()
+    # Build the short link from the restaurant's own public domain (de-branded);
+    # falls back to a relative path if no domain is configured for this clone.
+    rsettings = (await db.execute(select(RestaurantSettings))).scalars().first()
+    domain = (rsettings.public_domain or "").rstrip("/") if rsettings else ""
+    short_url = f"{domain}/r/{code}" if domain else f"/r/{code}"
+    short_code = code.split("-", 1)[-1].lower()
     short_link = ShortLink(
         code=short_code,
-        destination_url=f"https://hongshing.ca/r/{code}",
+        destination_url=short_url,
         link_type="reward",
         user_id=current_user.id,
         reward_id=reward.id,
@@ -224,7 +228,7 @@ async def claim_reward(
             issued_at=reward.issued_at,
             expires_at=reward.expires_at,
         ),
-        short_link=f"https://hongshing.ca/r/{code}",
+        short_link=short_url if domain else None,
     )
 
 
