@@ -101,3 +101,31 @@ def test_casl_warning_when_rewards_without_address():
 
 def test_no_casl_warning_when_address_present():
     assert casl_warnings(copy.deepcopy(VALID)) == []
+
+
+def test_valid_menu_passes():
+    p = copy.deepcopy(VALID)
+    p["menu"] = [
+        {"name": "Starters", "slug": "starters", "items": [{"name": "Spring Roll", "price": 3}]},
+    ]
+    assert validate_profile(p) == []
+
+
+def test_menu_must_be_a_list():
+    p = copy.deepcopy(VALID)
+    p["menu"] = {"name": "oops"}
+    assert any(e == "menu: must be a list of categories" for e in validate_profile(p))
+
+
+def test_menu_item_requires_name_and_price():
+    p = copy.deepcopy(VALID)
+    p["menu"] = [{"name": "Mains", "items": [{"image": "x.jpg"}]}]
+    errs = validate_profile(p)
+    assert any("menu[0].items[0].name" in e for e in errs)
+    assert any("menu[0].items[0].price" in e for e in errs)
+
+
+def test_menu_item_non_numeric_price():
+    p = copy.deepcopy(VALID)
+    p["menu"] = [{"name": "Mains", "items": [{"name": "X", "price": "free"}]}]
+    assert any("menu[0].items[0].price: must be numeric" in e for e in validate_profile(p))

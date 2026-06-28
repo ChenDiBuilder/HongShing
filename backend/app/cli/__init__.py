@@ -71,14 +71,6 @@ async def _reset_owner(email: str, new_password: str):
 
 
 @cli.command()
-@click.option("--force", is_flag=True, help="Force re-seed (clears existing menu)")
-def seed_menu(force: bool = False):
-    """Seed the database with the HongShing menu."""
-    from app.cli.seed_menu import seed_menu as _seed
-    asyncio.run(_seed(force=force))
-
-
-@cli.command()
 @click.option("--profile", required=True, help="Path to a Restaurant Profile YAML")
 @click.option("--owner-password", default=None, help="Owner password (default: generate a temp one)")
 @click.option(

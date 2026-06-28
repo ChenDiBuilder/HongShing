@@ -15,7 +15,7 @@ identity:
   domain: hongshing.demo.bridgewayinnovations.ca
 
 branding:
-  logo: assets/hongshing/logo.png   # TODO add real logo (relative to profiles/)
+  logo: assets/hongshing/logo.svg   # Hong Shing logo (the order.hongshing.com mark; shipped in profiles/assets/hongshing/)
   primary_color: "#b91c1c"          # TODO confirm brand colors
   secondary_color: "#1f2937"
   copy:
@@ -23,8 +23,8 @@ branding:
     reward_success: "You're in! Here's your reward."
 
 ordering:
-  external_url: ""                  # TODO restaurant's existing online-ordering page
-  provider: ""                      # toast | square | ubereats | doordash | custom
+  external_url: "https://hongshing.ca/order"   # restaurant's existing online-ordering page
+  provider: "custom"                # toast | square | ubereats | doordash | custom
   allow_without_signup: true
 
 rewards:
@@ -33,13 +33,19 @@ rewards:
     value: 10
     terms: "One per customer. Valid 30 days."
 
-campaigns:                          # QR acquisition sources
+campaigns:                          # QR acquisition sources (headline/subtitle shown on the QR landing)
   - source: table_tent
+    headline: "Grab a seat, grab a reward"
+    subtitle: "You're at the table — join now and get 10% off your next Hong Shing order."
   - source: counter
+    headline: "Welcome to Hong Shing"
+    subtitle: "Join our rewards at the counter — 10% off your next order."
   - source: receipt
+    headline: "Thanks for dining with us"
+    subtitle: "Scan to claim 10% off your next Hong Shing order."
 
 storefront:
-  enabled: false                    # native ordering — opt-in; redirect-mode demos skip it
+  enabled: true                     # native ordering on (menu seeded from the `menu:` block below)
 
 sms:
   sender_id: "Hong Shing"
@@ -56,7 +62,7 @@ locale:
 compliance:
   privacy_contact_email: "privacy@hongshing.ca"   # PIPEDA contact (demo value)
   support_phone: "+1 416-555-0188"                # customer-facing support line (demo value)
-  business_mailing_address: ""      # TODO CASL — registered mailing address (required to send marketing SMS)
+  business_mailing_address: "195 Dundas St W, Toronto, ON M5G 1C7"   # CASL — registered mailing address
 
 location:                           # customer-facing storefront display (PRD-12 S8)
   address: "195 Dundas St W, Toronto, ON M5G 1C7"
@@ -82,3 +88,272 @@ hours:                              # drives the EC2 start/stop schedule
 owner:
   email: "daniel.chen@bridgewayinnovations.ca"   # demo admin; add the restaurant owner's account at cutover
   name: "Daniel Chen"
+
+# Native-storefront menu (seeded into categories + menu_items when storefront.enabled).
+# Sourced from Hong Shing's live online-ordering menu (order.hongshing.com). Per-item
+# images live in profiles/assets/hongshing/menu/<image> and are copied to the box at
+# provision time; the seeder serves them at /menu/items/<image>. price is in dollars.
+menu:
+  - name: New Dishes
+    slug: new-dishes
+    image: 2875.jpg
+    items:
+      - name: General Tao Lobster
+        price: 45
+        image: 2875.jpg
+        popular: true
+      - name: Lobster E-Fu Noodles
+        price: 50
+        image: 2878.jpg
+      - name: XO Seafood Fried Rice
+        price: 22
+        image: 2890.jpg
+      - name: Typhoon Style Lobster
+        price: 45
+        image: 3719.jpg
+      - name: Ginger Scallion Cod
+        price: 24
+        image: 3752.jpg
+      - name: Stir Fry Eggplant
+        price: 19
+        image: 3819.jpg
+      - name: Seafood Ma Po Tofu
+        price: 25
+        image: 3822.jpg
+  - name: Starters
+    slug: starters
+    image: 2915.jpg
+    items:
+      - name: Honey Garlic Chicken Wings
+        price: 19
+        image: 2915.jpg
+      - name: Spicy Dry Chicken Wings
+        price: 19
+        image: 2916.jpg
+      - name: Golden Fried Chicken Wings
+        price: 18
+        image: 2917.jpg
+      - name: Deep Fried Shrimp Wontons
+        price: 14
+        image: 2920.jpg
+      - name: Ma La Chicken Wings
+        price: 19
+        image: 2921.jpg
+      - name: Chicken Balls
+        price: 15
+        image: 2922.jpg
+      - name: Vegetable Spring Rolls
+        price: 3
+        image: 2969.jpg
+      - name: Shrimp Roll
+        price: 6
+        image: 2970.jpg
+  - name: Dim Sum
+    slug: dim-sum
+    image: 3721.jpg
+    items:
+      - name: Prawn Har Gow
+        price: 13
+        image: 3721.jpg
+        popular: true
+      - name: Pork Siu Mai
+        price: 13
+        image: 3722.jpg
+      - name: Xiao Long Bao
+        price: 13
+        image: 3724.jpg
+      - name: Vegetable Crystal Dumpling
+        price: 12
+        image: 3725.jpg
+      - name: Dim Sum Platter
+        price: 21
+        image: 3726.jpg
+  - name: Soup
+    slug: soup
+    image: 2766.jpg
+    items:
+      - name: Crab Meat Corn Soup
+        price: 8
+        image: 2766.jpg
+      - name: Crab Meat Fish Maw Soup
+        price: 9
+        image: 2767.jpg
+      - name: Chicken Sweet Corn Soup
+        price: 8
+        image: 2768.jpg
+      - name: Shrimp Wonton Soup
+        price: 7
+        image: 2769.jpg
+      - name: Pork Wonton Soup
+        price: 7
+        image: 2770.jpg
+      - name: Hot & Sour Soup
+        price: 6
+        image: 2771.jpg
+  - name: Poultry
+    slug: poultry
+    image: 2773.jpg
+    items:
+      - name: Curry Chicken
+        price: 21
+        image: 2773.jpg
+      - name: General Tao Chicken
+        price: 20
+        image: 2774.jpg
+      - name: Lemon Chicken
+        price: 22
+        image: 2775.jpg
+      - name: Sweet & Sour Chicken
+        price: 20
+        image: 2776.jpg
+      - name: Black Bean Chicken
+        price: 20
+        image: 2777.jpg
+      - name: Chili Chicken
+        price: 20
+        image: 2779.jpg
+      - name: Oven Roasted Duck
+        price: 28
+        image: 3457.jpg
+  - name: Beef
+    slug: beef
+    image: 2870.jpg
+    items:
+      - name: Beef with Gai Lan
+        price: 21
+        image: 2870.jpg
+        popular: true
+      - name: Black Bean Beef
+        price: 21
+        image: 2871.jpg
+        popular: true
+      - name: Sichuan Beef Tenderloin
+        price: 25
+        image: 2872.jpg
+      - name: Crispy Beef
+        price: 21
+        image: 2873.jpg
+      - name: Beef with Broccoli
+        price: 21
+        image: 2874.jpg
+      - name: Garlic Beef Tenderloin
+        price: 25
+        image: 3458.jpg
+  - name: Seafood
+    slug: seafood
+    image: 2809.jpg
+    items:
+      - name: Spicy Dry Lobster
+        price: 45
+        image: 2809.jpg
+        popular: true
+      - name: Deep Fried Spicy Cod
+        price: 25
+        image: 2810.jpg
+      - name: Spicy Shrimps
+        price: 18
+        image: 2812.jpg
+      - name: Szechuan Lobster
+        price: 45
+        image: 2813.jpg
+      - name: Black Bean Lobster
+        price: 45
+        image: 2814.jpg
+      - name: Ginger Onion Lobster
+        price: 45
+        image: 2815.jpg
+      - name: Spicy Squid
+        price: 20
+        image: 2816.jpg
+  - name: Noodles
+    slug: noodles
+    image: 2823.jpg
+    items:
+      - name: Rice Noodles with Beef
+        price: 19
+        image: 2823.jpg
+      - name: Beef Fried Noodles
+        price: 19
+        image: 2824.jpg
+      - name: Seafood Fried Noodles
+        price: 22
+        image: 2825.jpg
+      - name: Mixed Vegetables Fried Noodles
+        price: 19
+        image: 2826.jpg
+      - name: Shanghai Noodles
+        price: 19
+        image: 2828.jpg
+      - name: Singapore Noodles
+        price: 19
+        image: 2829.jpg
+      - name: Chicken Fried Noodles
+        price: 19
+        image: 2830.jpg
+      - name: Stir Fried Egg Noodles
+        price: 17
+        image: 2831.jpg
+      - name: Cantonese Fried Noodles
+        price: 23
+        image: 2833.jpg
+  - name: Rice
+    slug: rice
+    image: 2784.jpg
+    items:
+      - name: Hong Shing Fried Rice
+        price: 19
+        image: 2784.jpg
+        popular: true
+      - name: Steamed Rice
+        price: 3
+        image: 2787.jpg
+      - name: Chicken Fried Rice
+        price: 18
+        image: 2789.jpg
+      - name: Shrimp Fried Rice
+        price: 19
+        image: 2791.jpg
+      - name: Mixed Vegetable Fried Rice
+        price: 19
+        image: 2792.jpg
+  - name: Vegetables
+    slug: vegetables
+    image: 2799.jpg
+    items:
+      - name: Deep Fried Spicy Tofu
+        price: 17
+        image: 2799.jpg
+      - name: Garlic Broccoli
+        price: 17
+        image: 2801.jpg
+      - name: Braised Shiitake Mushrooms
+        price: 20
+        image: 2803.jpg
+      - name: Garlic Bok Choy
+        price: 19
+        image: 2804.jpg
+      - name: Spicy Green Beans
+        price: 17
+        image: 2805.jpg
+      - name: Mixed Seasonal Vegetables
+        price: 18
+        image: 2808.jpg
+      - name: Ginger Gai-Lan
+        price: 18
+        image: 2981.jpg
+  - name: Refreshments
+    slug: refreshments
+    image: 2927.jpg
+    items:
+      - name: Ginger Ale
+        price: 3
+        image: 2927.jpg
+      - name: Bottled Water
+        price: 3
+        image: 2931.jpg
+      - name: Sprite
+        price: 3
+        image: 2932.jpg
+      - name: Coke
+        price: 3
+        image: 2938.jpg

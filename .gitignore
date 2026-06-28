@@ -43,5 +43,9 @@ seed_prod.py
 # Walkthrough demo screenshots are committed docs assets (exception to *.png above)
 !docs/walkthrough/img/*.png
 
+# Restaurant Profile template assets (logo + menu photos) — committed (exception to *.png/*.jpg)
+!profiles/assets/**/*.png
+!profiles/assets/**/*.jpg
+
 # Local-only Claude Code preview/launch config
 .claude/

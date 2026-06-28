@@ -96,6 +96,35 @@ def validate_profile(profile: dict) -> list[str]:
                 except (TypeError, ValueError):
                     errors.append(f"rewards[{i}].value: must be numeric")
 
+    menu = profile.get("menu")
+    if menu is not None:
+        if not isinstance(menu, list):
+            errors.append("menu: must be a list of categories")
+        else:
+            for i, cat in enumerate(menu):
+                if not isinstance(cat, dict):
+                    errors.append(f"menu[{i}]: must be a mapping")
+                    continue
+                if not str(cat.get("name") or "").strip():
+                    errors.append(f"menu[{i}].name: required")
+                items = cat.get("items") or []
+                if not isinstance(items, list):
+                    errors.append(f"menu[{i}].items: must be a list")
+                    continue
+                for j, it in enumerate(items):
+                    if not isinstance(it, dict):
+                        errors.append(f"menu[{i}].items[{j}]: must be a mapping")
+                        continue
+                    if not str(it.get("name") or "").strip():
+                        errors.append(f"menu[{i}].items[{j}].name: required")
+                    if "price" not in it:
+                        errors.append(f"menu[{i}].items[{j}].price: required (dollars)")
+                    else:
+                        try:
+                            float(it["price"])
+                        except (TypeError, ValueError):
+                            errors.append(f"menu[{i}].items[{j}].price: must be numeric")
+
     return errors
 
 
