@@ -12,6 +12,44 @@ def generate_reward_code(prefix: str = "HS") -> str:
     return f"{prefix}-{segment}"
 
 
+DEFAULT_REWARD_SMS_TEMPLATE = "{restaurant}: your reward is ready — {reward_code}. Order again: {ordering_url}"
+
+
+def should_send_reward_sms(
+    consent_opt_in: bool,
+    mailing_address: str | None,
+    template: str | None,
+    phone: str | None,
+) -> bool:
+    """CASL gate (PRD-12 S7 / SCRUM-64): send a reward SMS ONLY when the customer
+    has explicitly opted in to marketing SMS AND the restaurant has a configured
+    mailing address (required in the message footer) AND there is a template and a
+    destination phone. Strict by construction — any missing piece means no send."""
+    return bool(consent_opt_in) and bool(mailing_address) and bool(template) and bool(phone)
+
+
+def render_reward_sms(
+    template: str | None,
+    restaurant_name: str,
+    reward_code: str,
+    ordering_url: str,
+    mailing_address: str,
+) -> str:
+    """Render the reward SMS body and append the CASL footer (sender mailing address
+    + how to opt out). A malformed template falls back to the default so a send is
+    never blocked by bad config."""
+    tmpl = template or DEFAULT_REWARD_SMS_TEMPLATE
+    try:
+        body = tmpl.format(
+            restaurant=restaurant_name, reward_code=reward_code, ordering_url=ordering_url
+        )
+    except (KeyError, IndexError, ValueError):
+        body = DEFAULT_REWARD_SMS_TEMPLATE.format(
+            restaurant=restaurant_name, reward_code=reward_code, ordering_url=ordering_url
+        )
+    return f"{body}\n{restaurant_name}, {mailing_address}. Reply STOP to opt out."
+
+
 def calculate_discount(discount_type: str, discount_value: int, subtotal_cents: int) -> int:
     """Discount in cents, clamped to [0, subtotal].
 

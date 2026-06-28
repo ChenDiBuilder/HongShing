@@ -23,7 +23,7 @@ storefront: {enabled: true}
 sms:
   origination_number: "+12494218942"
   region: us-east-2
-  templates: {otp: "Code {code} for {restaurant}."}
+  templates: {otp: "Code {code} for {restaurant}.", reward: "{restaurant}: {reward_code}"}
 locale: {timezone: "America/Toronto", languages: [en, zh]}
 compliance: {business_mailing_address: "1 Test St, Toronto, ON M5G 1Z4"}
 location:
@@ -93,6 +93,7 @@ async def test_seed_populates_all_layers(factory, tmp_path):
         assert settings.tagline == "Order ahead, earn perks."
         assert settings.reward_success_copy == "Reward unlocked!"
         assert settings.otp_sms_template == "Code {code} for {restaurant}."
+        assert settings.reward_sms_template == "{restaurant}: {reward_code}"
         # PRD-12 S9 legal/locale (SCRUM-66)
         assert settings.legal_name == "Test Bistro Inc."
         assert settings.business_mailing_address == "1 Test St, Toronto, ON M5G 1Z4"

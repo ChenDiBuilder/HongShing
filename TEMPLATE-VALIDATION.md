@@ -39,7 +39,7 @@ design decision, or a feature build.
 | `sms.origination_number` | `.env` → compose → `config.sns_origination_number` | ✅ |
 | `sms.region` | `.env` → compose → boto3 region (compose default now `us-east-2`) | ✅ |
 | `sms.templates.otp` | `restaurant_settings.otp_sms_template` → `auth.py` OTP send (safe fallback on bad template) | ✅ (SCRUM-60) |
-| `sms.templates.reward` | — (no reward SMS is sent at all — missing feature) | ❌ PRD-12 |
+| `sms.templates.reward` | `restaurant_settings.reward_sms_template` → reward-issuance SMS, CASL-gated on consent + `business_mailing_address` | ✅ (SCRUM-64) |
 | `locale.timezone` | `restaurant_settings.timezone` (NOT propagated to the EC2 schedule) | ⚠️ partial |
 | `locale.languages` | `restaurant_settings.languages` (CSV) → landing-config → `<html lang>` seam (plumbing only) | ✅ (SCRUM-66) |
 | `compliance.privacy_contact_email` | `restaurant_settings.privacy_contact_email` → landing-config + `/privacy` | ✅ |

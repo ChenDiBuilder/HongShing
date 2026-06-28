@@ -121,7 +121,7 @@ async def verify_otp(
         await db.flush()
 
     if is_new_user:
-        from app.models import SignupEvent
+        from app.models import SignupEvent, UserNotificationPreference
 
         signup = SignupEvent(
             user_id=user.id,
@@ -132,6 +132,16 @@ async def verify_otp(
             marketing_opt_in=body.marketing_opt_in,
         )
         db.add(signup)
+        # Persist the marketing-SMS consent given at signup so the reward SMS
+        # (PRD-12 S7 / SCRUM-64) and admin sends gate on one source of truth (CASL).
+        db.add(
+            UserNotificationPreference(
+                user_id=user.id,
+                sms_marketing_opt_in=body.marketing_opt_in,
+                consent_source="signup",
+                consented_at=datetime.now(timezone.utc) if body.marketing_opt_in else None,
+            )
+        )
 
     access_token = create_access_token(user.id, user.role)
     refresh_token_str = create_refresh_token(user.id, user.role)

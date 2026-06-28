@@ -47,6 +47,9 @@ class RestaurantSettings(Base):
     tagline: Mapped[str | None] = mapped_column(String(300), nullable=True)
     reward_success_copy: Mapped[str | None] = mapped_column(String(300), nullable=True)
     otp_sms_template: Mapped[str | None] = mapped_column(String(320), nullable=True)
+    # Reward-delivery SMS body (PRD-12 S7 / SCRUM-64). Sent on reward issuance only
+    # when consent + business_mailing_address are present (CASL). Seeded from sms.templates.reward.
+    reward_sms_template: Mapped[str | None] = mapped_column(String(320), nullable=True)
     # Legal identity + locale (PRD-12 S9 / SCRUM-66). legal_name -> footer/privacy;
     # business_mailing_address -> CASL SMS footer (consumed by SCRUM-64);
     # languages -> CSV locale seam surfaced to the SPA (plumbing only, not translation).

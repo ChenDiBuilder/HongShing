@@ -10,12 +10,14 @@ from app.database import AsyncSession, get_db
 from app.middleware.auth import require_customer
 from app.models import (
     ExternalOrderRedirect,
+    Notification,
     QRCampaign,
     RestaurantSettings,
     Reward,
     RewardTemplate,
     ShortLink,
     User,
+    UserNotificationPreference,
 )
 from app.schemas.common import (
     ClaimRewardRequest,
@@ -25,7 +27,12 @@ from app.schemas.common import (
     RewardResponse,
     UserResponse,
 )
-from app.services.reward_service import generate_reward_code
+from app.services.reward_service import (
+    generate_reward_code,
+    render_reward_sms,
+    should_send_reward_sms,
+)
+from app.services.sms_service import send_sms
 
 router = APIRouter()
 
@@ -215,8 +222,48 @@ async def claim_reward(
         expires_at=expires_at,
     )
     db.add(short_link)
+
+    # Reward-delivery SMS (PRD-12 S7 / SCRUM-64), CASL-gated. Only this genuinely-new
+    # branch reaches here, so a re-claim never re-sends. Send strictly: explicit
+    # marketing consent AND a configured mailing address (CASL footer) AND a template
+    # AND a phone; otherwise silently skip. Record it for the admin notification log.
+    prefs = (
+        await db.execute(
+            select(UserNotificationPreference).where(
+                UserNotificationPreference.user_id == current_user.id
+            )
+        )
+    ).scalar_one_or_none()
+    consent = bool(prefs and prefs.sms_marketing_opt_in)
+    mailing = rsettings.business_mailing_address if rsettings else None
+    reward_template_sms = rsettings.reward_sms_template if rsettings else None
+    reward_sms_body = None
+    if should_send_reward_sms(consent, mailing, reward_template_sms, current_user.phone):
+        ordering_url = (
+            (rsettings.external_ordering_url or rsettings.public_domain or "") if rsettings else ""
+        )
+        reward_sms_body = render_reward_sms(
+            reward_template_sms, rsettings.restaurant_name, reward.code, ordering_url, mailing
+        )
+        db.add(
+            Notification(
+                sender_id=None,  # system-sent on reward issuance
+                recipient_id=current_user.id,
+                title="Reward ready",
+                body=reward_sms_body,
+                channel="sms",
+                message_type="marketing",
+                status="sent",
+            )
+        )
+
     await db.commit()
     await db.refresh(reward)
+
+    # Fire the SMS after the commit so we never text on a rolled-back claim;
+    # send_sms swallows SNS errors so a delivery failure can't break the response.
+    if reward_sms_body:
+        send_sms(current_user.phone, reward_sms_body)
 
     return ClaimRewardResponse(
         reward=RewardResponse(
