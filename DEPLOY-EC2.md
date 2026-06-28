@@ -2,7 +2,11 @@
 
 Pilot-economics deployment: **one `t4g.micro`** runs Postgres + the FastAPI
 backend + nginx (which serves the three Vite SPAs). **No ALB, no RDS, no NAT.**
-The box auto-starts at **9am ET** and stops at **3pm ET** (`infra-ec2/schedule.tf`).
+The box auto-starts/stops on a **profile-driven** business-hours window
+(`infra-ec2/schedule.tf`): `provision-restaurant.sh` translates the profile's
+`hours.open`/`hours.close` into the start/stop crons with a ~1h buffer (start ~1h
+before open, stop ~1h after close), in `locale.timezone`. Defaults to **9am–3pm ET**
+when `hours` is unset. (HongShing's 11:00–22:00 ⇒ box up ~10:00–23:00 ET.)
 
 This is the cheaper alternative to the Fargate stack in `infra/` (kept as the
 future upgrade path). Cost: **~$3–8/mo** + SMS usage, vs ~$37/mo for Fargate+ALB+RDS.
