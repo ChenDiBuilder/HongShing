@@ -1,12 +1,15 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import select, text
+from sqlalchemy import select, text, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.database import AsyncSession, get_db
 from app.middleware.auth import require_customer
-from app.models import Cart, CartItem, User
+from app.models import Cart, CartItem, RestaurantSettings, Reward, RewardTemplate, User
 from app.models.menu import MenuItem
+from app.services.reward_service import calculate_discount
 
 router = APIRouter(prefix="/api", tags=["cart"])
 
@@ -20,6 +23,11 @@ class AddToCartRequest(BaseModel):
 
 class UpdateQuantityRequest(BaseModel):
     quantity: int
+
+
+class CheckoutRequest(BaseModel):
+    # Optional reward the customer chose to redeem at checkout (PRD-12 / SCRUM-76).
+    reward_id: str | None = None
 
 
 @router.get("/cart")
@@ -180,6 +188,7 @@ async def clear_cart(
 
 @router.post("/cart/checkout")
 async def checkout(
+    body: CheckoutRequest | None = None,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_customer),
 ):
@@ -207,12 +216,70 @@ async def checkout(
     from app.models.order import Order as OrderModel
     from app.models.order import OrderItem as OrderItemModel
 
-    total_cents = sum(i.price_cents * i.quantity for i in items)
+    subtotal_cents = sum(i.price_cents * i.quantity for i in items)
     item_count = sum(i.quantity for i in items)
+
+    # Reward redemption (PRD-12 / SCRUM-76). A reward only discounts the order if it
+    # is the caller's own *issued* reward, not expired, meets the template's minimum,
+    # and the atomic issued->redeemed flip wins — so a reward can never be double-spent
+    # (mirrors the SCRUM-72 admin-redeem guard).
+    discount_cents = 0
+    applied_reward = None
+    reward_id = body.reward_id if body else None
+    if reward_id:
+        row = (
+            await db.execute(
+                select(Reward, RewardTemplate)
+                .join(RewardTemplate, Reward.reward_template_id == RewardTemplate.id)
+                .where(
+                    Reward.id == reward_id,
+                    Reward.user_id == current_user.id,
+                    Reward.status == "issued",
+                )
+            )
+        ).first()
+        if row:
+            reward, template = row
+            now = datetime.now(timezone.utc)
+            not_expired = reward.expires_at is None or reward.expires_at > now
+            meets_min = (template.min_order_cents or 0) <= subtotal_cents
+            candidate = calculate_discount(
+                template.reward_type, template.reward_value, subtotal_cents
+            )
+            if not_expired and meets_min and candidate > 0:
+                redeemed = await db.execute(
+                    update(Reward)
+                    .where(
+                        Reward.id == reward_id,
+                        Reward.user_id == current_user.id,
+                        Reward.status == "issued",
+                    )
+                    .values(
+                        status="redeemed",
+                        redeemed_at=now,
+                        redemption_source="checkout",
+                    )
+                )
+                if redeemed.rowcount == 1:
+                    discount_cents = candidate
+                    applied_reward = reward
+
+    settings = (await db.execute(select(RestaurantSettings))).scalars().first()
+    tax_rate = settings.tax_rate if (settings and settings.tax_rate) else 0.0
+    currency_symbol = (settings.currency_symbol if settings else None) or "$"
+
+    discounted = subtotal_cents - discount_cents
+    # Tax on the post-discount subtotal; round half-up so it matches the SPA's Math.round.
+    tax_cents = int(discounted * tax_rate + 0.5) if tax_rate else 0
+    total_cents = discounted + tax_cents
 
     order = OrderModel(
         user_id=current_user.id,
+        subtotal_cents=subtotal_cents,
+        discount_cents=discount_cents,
+        tax_cents=tax_cents,
         total_cents=total_cents,
+        reward_id=applied_reward.id if applied_reward else None,
         item_count=item_count,
         status="confirmed",
     )
@@ -235,7 +302,13 @@ async def checkout(
 
     return {
         "order_id": order.id,
-        "total_cents": order.total_cents,
+        "subtotal_cents": subtotal_cents,
+        "discount_cents": discount_cents,
+        "tax_cents": tax_cents,
+        "total_cents": total_cents,
+        "currency_symbol": currency_symbol,
         "item_count": order.item_count,
         "status": order.status,
+        "reward_id": applied_reward.id if applied_reward else None,
+        "reward_code": applied_reward.code if applied_reward else None,
     }

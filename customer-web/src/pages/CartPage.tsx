@@ -1,15 +1,30 @@
-import { useState } from "react";
-import { formatPrice, taxRate, RESTAURANT_INFO } from "../types";
+import { useState, useEffect } from "react";
+import { formatPrice, taxRate, RESTAURANT_INFO, type UserReward } from "../types";
 import { useCart } from "../context/CartContext";
 import { api } from "../context/api";
 
 interface Props {
   primaryColor: string;
   profile?: any;
+  rewards?: UserReward[];
+  loadRewards?: () => void;
   setPage: (p: any) => void;
 }
 
-function PlaceOrderButton({ primaryColor, profile, onPlace }: { primaryColor: string; profile?: any; onPlace: () => void }) {
+// Mirror of the backend reward_service.calculate_discount, for a live cart preview.
+// The server re-computes authoritatively at checkout; this only previews the line.
+export function estimateDiscount(reward: UserReward | undefined, subtotalCents: number): number {
+  if (!reward) return 0;
+  const v = reward.reward_value ?? 0;
+  if (subtotalCents <= 0 || v <= 0) return 0;
+  if (reward.reward_type === "percent" || reward.reward_type === "percentage") {
+    return Math.min(Math.floor((subtotalCents * v) / 100), subtotalCents);
+  }
+  if (reward.reward_type === "fixed") return Math.min(v, subtotalCents);
+  return 0;
+}
+
+function PlaceOrderButton({ primaryColor, profile, rewardId, onPlace }: { primaryColor: string; profile?: any; rewardId?: string; onPlace: () => void }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -21,7 +36,12 @@ function PlaceOrderButton({ primaryColor, profile, onPlace }: { primaryColor: st
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(api("/api/cart/checkout"), { method: "POST", credentials: "include" });
+      const res = await fetch(api("/api/cart/checkout"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ reward_id: rewardId ?? null }),
+      });
       const d = await res.json();
       if (!res.ok) throw new Error(d.detail || "Checkout failed");
       onPlace();
@@ -42,16 +62,26 @@ function PlaceOrderButton({ primaryColor, profile, onPlace }: { primaryColor: st
   );
 }
 
-export function CartPage({ primaryColor, profile, setPage }: Props) {
+export function CartPage({ primaryColor, profile, rewards, loadRewards, setPage }: Props) {
   const cart = useCart();
   interface CartItemData { item: any; quantity: number; cartItemId?: string; }
   const [guestName, setGuestName] = useState("");
   const [guestPhone, setGuestPhone] = useState("");
 
+  // Load rewards once so we can preview/apply a discount (PRD-12 / SCRUM-76).
+  useEffect(() => {
+    if (profile && loadRewards && !(rewards && rewards.length)) loadRewards();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile]);
+
+  const activeReward = rewards?.find((r) => r.status === "issued");
+  const discountCents = estimateDiscount(activeReward, cart.subtotalCents);
+  const discounted = cart.subtotalCents - discountCents;
+
   const tr = taxRate();
   const subtotal = formatPrice(cart.subtotalCents);
-  const tax = formatPrice(Math.round(cart.subtotalCents * tr));
-  const total = formatPrice(Math.round(cart.subtotalCents * (1 + tr)));
+  const tax = formatPrice(Math.round(discounted * tr));
+  const total = formatPrice(discounted + Math.round(discounted * tr));
 
   if (cart.items.length === 0) {
     return (
@@ -110,6 +140,12 @@ export function CartPage({ primaryColor, profile, setPage }: Props) {
 
       <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 space-y-2 mb-6">
         <div className="flex justify-between text-sm"><span className="text-gray-500">Subtotal</span><span className="font-medium">{subtotal}</span></div>
+        {discountCents > 0 && (
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-500">Reward{activeReward?.code ? ` (${activeReward.code})` : ""}</span>
+            <span className="font-medium text-green-600">−{formatPrice(discountCents)}</span>
+          </div>
+        )}
         <div className="flex justify-between text-sm"><span className="text-gray-500">Tax (est.)</span><span className="font-medium">{tax}</span></div>
         <hr className="border-gray-100" />
         <div className="flex justify-between text-base"><span className="font-bold">Total</span><span className="font-bold" style={{ color: primaryColor }}>{total}</span></div>
@@ -125,7 +161,7 @@ export function CartPage({ primaryColor, profile, setPage }: Props) {
 
       <div className="fixed bottom-0 left-0 right-0 px-3 pb-4 bg-white/80 backdrop-blur">
         <div className="max-w-3xl mx-auto space-y-2">
-          <PlaceOrderButton primaryColor={primaryColor} profile={profile} onPlace={() => cart.clearCart()} />
+          <PlaceOrderButton primaryColor={primaryColor} profile={profile} rewardId={activeReward?.id} onPlace={() => cart.clearCart()} />
         </div>
       </div>
     </div>

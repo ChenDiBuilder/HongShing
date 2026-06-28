@@ -223,7 +223,7 @@ export default function App() {
   } else if (page === "product-detail" && selectedProduct) {
     content = <>{header}{wrap(<ProductDetailPage product={selectedProduct} setPage={setPage} primaryColor={config.primary_color} />)}</>;
   } else if (page === "cart") {
-    content = <>{header}{wrap(<CartPage primaryColor={config.primary_color} profile={profile} setPage={setPage} />)}</>;
+    content = <>{header}{wrap(<CartPage primaryColor={config.primary_color} profile={profile} rewards={rewards} loadRewards={loadRewards} setPage={setPage} />)}</>;
   } else if (page === "order-confirmation" && orderConfirmation) {
     content = <>{header}{wrap(<OrderConfirmation order={orderConfirmation} primaryColor={config.primary_color} setPage={setPage} loadMenu={loadMenu} />)}</>;
   } else if (page === "order-tracking") {

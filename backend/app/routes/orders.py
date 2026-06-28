@@ -23,6 +23,9 @@ class CreateOrderRequest(BaseModel):
 def _format_order(order: Order, items: list[OrderItem]) -> dict:
     return {
         "id": order.id,
+        "subtotal_cents": order.subtotal_cents,
+        "discount_cents": order.discount_cents,
+        "tax_cents": order.tax_cents,
         "total_cents": order.total_cents,
         "item_count": order.item_count,
         "status": order.status,
@@ -47,8 +50,13 @@ async def create_order(
     total_cents = sum(i.price_cents * i.quantity for i in body.items)
     item_count = sum(i.quantity for i in body.items)
 
+    # This direct-create path carries no reward/tax (the money path with reward
+    # discounts + tax is /api/cart/checkout); record subtotal == total for parity.
     order = Order(
         user_id=current_user.id,
+        subtotal_cents=total_cents,
+        discount_cents=0,
+        tax_cents=0,
         total_cents=total_cents,
         item_count=item_count,
         status="confirmed",

@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -17,7 +17,21 @@ class Order(Base):
 
     id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=new_uuid)
     user_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("users.id"), nullable=False)
+    # Money breakdown (PRD-12 / SCRUM-76). subtotal = pre-discount item sum;
+    # discount from a redeemed reward (calculate_discount); tax on the discounted
+    # subtotal; total_cents = subtotal - discount + tax (the amount actually owed).
+    subtotal_cents: Mapped[int] = mapped_column(Integer, nullable=False)
+    discount_cents: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default=text("0")
+    )
+    tax_cents: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default=text("0")
+    )
     total_cents: Mapped[int] = mapped_column(Integer, nullable=False)
+    # The reward consumed at checkout, if any (FK to rewards.id).
+    reward_id: Mapped[str | None] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("rewards.id"), nullable=True
+    )
     item_count: Mapped[int] = mapped_column(Integer, nullable=False)
     status: Mapped[str] = mapped_column(String(20), default="confirmed")
     created_at: Mapped[datetime] = mapped_column(

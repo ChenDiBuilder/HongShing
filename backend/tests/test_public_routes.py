@@ -96,6 +96,21 @@ class TestLandingConfig:
         assert "otp_sms_template" not in data
         assert "business_mailing_address" not in data
 
+    async def test_money_fields_match_checkout(self, client, db_session):
+        """The SPA reads tax_rate/currency from landing-config; assert they are the
+        same numbers the checkout money path uses (PRD-12 / SCRUM-75)."""
+        from app.models import RestaurantSettings
+
+        db_session.add(RestaurantSettings(
+            id="00000000-0000-0000-0000-000000000001",
+            restaurant_name="T", primary_color="#000000",
+            tax_rate=0.13, currency_symbol="£",
+        ))
+        await db_session.flush()
+        data = (await client.get("/api/public/landing-config")).json()
+        assert data["tax_rate"] == 0.13
+        assert data["currency_symbol"] == "£"
+
     async def test_bad_hours_json_does_not_500(self, client, db_session):
         from app.models import RestaurantSettings
 
