@@ -69,6 +69,8 @@ comp  = p.get("compliance", {}) or {}
 owner = p.get("owner", {}) or {}
 brand = p.get("branding", {}) or {}
 store = p.get("storefront", {}) or {}
+hours = p.get("hours", {}) or {}
+loc   = p.get("locale", {}) or {}
 
 import re
 # Pre-flight gate (PRD-12 S11 / SCRUM-79): reject an obviously-malformed profile
@@ -111,6 +113,23 @@ emit("OWNER_EMAIL", owner.get("email", ""))
 emit("OWNER_NAME", owner.get("name", ""))
 emit("BRANDING_LOGO", brand.get("logo", ""))                                 # PRD-12 S4 logo pipeline
 emit("STOREFRONT_ENABLED", "true" if store.get("enabled", False) else "false")  # PRD-12 S6 gating
+
+# PRD-12 S5 (SCRUM-62): hours.open/close drive the EC2 start/stop schedule with a
+# ~1h buffer (start ~1h before open, stop ~1h after close). Falls back to the
+# current 9-3 ET default when hours are absent or unparseable.
+_default_start, _default_stop = "cron(0 9 * * ? *)", "cron(0 15 * * ? *)"
+try:
+    _oh = int(str(hours["open"]).split(":")[0])
+    _ch = int(str(hours["close"]).split(":")[0])
+    _start_h = max(0, _oh - 1)
+    _stop_h = min(23, _ch + 1)
+    _start_cron = f"cron(0 {_start_h} * * ? *)"
+    _stop_cron = f"cron(0 {_stop_h} * * ? *)"
+except (KeyError, ValueError, IndexError, TypeError):
+    _start_cron, _stop_cron = _default_start, _default_stop
+emit("SCHEDULE_START_CRON", _start_cron)
+emit("SCHEDULE_STOP_CRON", _stop_cron)
+emit("SCHEDULE_TIMEZONE", loc.get("timezone") or "America/Toronto")
 PY
 )" || { echo "ERROR: failed to read profile $PROFILE" >&2; exit 1; }
 eval "$PROFILE_VARS"
@@ -122,6 +141,7 @@ echo "=== Provisioning '$SLUG' → https://$FQDN ==="
 echo "    sms: sender='$SMS_SENDER_ID' number='$SMS_ORIGINATION_NUMBER' region='$SMS_REGION'"
 echo "    owner: $OWNER_NAME <$OWNER_EMAIL>"
 echo "    branding: logo='$BRANDING_LOGO'  storefront_enabled=$STOREFRONT_ENABLED"
+echo "    schedule: start=$SCHEDULE_START_CRON  stop=$SCHEDULE_STOP_CRON  tz=$SCHEDULE_TIMEZONE"
 
 # ── 2. Terraform: own state key, apply the box ──────────────────────────────
 echo "=== terraform init + apply (state key: $SLUG/terraform.tfstate) ==="
@@ -135,7 +155,10 @@ MY_CIDR="$(curl -s https://checkip.amazonaws.com)/32"
 terraform apply -auto-approve \
   -var="slug=$SLUG" \
   -var="fqdn=$FQDN" \
-  -var="ssh_ingress_cidr=[\"$MY_CIDR\"]"
+  -var="ssh_ingress_cidr=[\"$MY_CIDR\"]" \
+  -var="schedule_start_cron=$SCHEDULE_START_CRON" \
+  -var="schedule_stop_cron=$SCHEDULE_STOP_CRON" \
+  -var="schedule_timezone=$SCHEDULE_TIMEZONE"
 
 EC2_IP=$(terraform output -raw ec2_public_ip)
 echo "EC2 EIP: $EC2_IP"

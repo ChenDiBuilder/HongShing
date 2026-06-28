@@ -40,12 +40,12 @@ design decision, or a feature build.
 | `sms.region` | `.env` → compose → boto3 region (compose default now `us-east-2`) | ✅ |
 | `sms.templates.otp` | `restaurant_settings.otp_sms_template` → `auth.py` OTP send (safe fallback on bad template) | ✅ (SCRUM-60) |
 | `sms.templates.reward` | `restaurant_settings.reward_sms_template` → reward-issuance SMS, CASL-gated on consent + `business_mailing_address` | ✅ (SCRUM-64) |
-| `locale.timezone` | `restaurant_settings.timezone` (NOT propagated to the EC2 schedule) | ⚠️ partial |
+| `locale.timezone` | `restaurant_settings.timezone` + the EC2 start/stop schedule timezone (SCRUM-62) | ✅ (SCRUM-62) |
 | `locale.languages` | `restaurant_settings.languages` (CSV) → landing-config → `<html lang>` seam (plumbing only) | ✅ (SCRUM-66) |
 | `compliance.privacy_contact_email` | `restaurant_settings.privacy_contact_email` → landing-config + `/privacy` | ✅ |
 | `compliance.support_phone` | `restaurant_settings.support_phone` → landing-config (**added in SCRUM-54**) | ✅ (SCRUM-54) |
 | `compliance.business_mailing_address` | `restaurant_settings.business_mailing_address` (seeded; CASL SMS footer use lands in SCRUM-64) | ✅ (SCRUM-66) |
-| `hours.open` / `hours.close` | — (documented to drive the EC2 start/stop schedule; provisioner never reads them) | ❌ PRD-12 |
+| `hours.open` / `hours.close` | provision-restaurant.sh → `schedule_start_cron`/`schedule_stop_cron` (±1h buffer; defaults 9-3 ET) | ✅ (SCRUM-62) |
 | `owner.email` | `users.email` (owner) + `.env OWNER_EMAIL` + certbot reg email | ✅ |
 | `owner.name` | `users.name` | ✅ |
 

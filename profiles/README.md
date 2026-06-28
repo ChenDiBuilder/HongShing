@@ -26,7 +26,7 @@ is *write a profile → provision*, not edit code. See **PRD-11** for the full d
 | `sms` | SNS sender/number/region + message templates (per-restaurant origination) |
 | `locale` | timezone (also the schedule timezone) + languages |
 | `compliance` | PIPEDA privacy contact + CASL mailing address (required for marketing SMS) |
-| `hours` | the EC2 start/stop schedule window |
+| `hours` | `open`/`close` drive the EC2 start/stop schedule (±1h buffer; defaults to 9am–3pm ET when unset) |
 | `owner` | the initial admin (`owner` role) user |
 
 ## Domain model (demo → production)

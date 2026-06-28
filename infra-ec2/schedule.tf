@@ -1,7 +1,9 @@
 # ── Business-hours start/stop (cost control) ──
-# Start the box at 9am ET, stop it at 3pm ET. While stopped you pay only for the
-# EBS volume (~$1.60/mo) — no compute. The customer signup/OTP/rewards APIs are
-# down outside these hours (pilot/cost-pause; widen before real launch).
+# The window is profile-driven (PRD-12 S5 / SCRUM-62): provision-restaurant.sh
+# translates the profile's hours.open/close into schedule_start_cron/stop_cron with a
+# ~1h buffer (defaulting to 9am-3pm ET when hours are unset). While stopped you pay
+# only for the EBS volume (~$1.60/mo) — no compute. The customer signup/OTP/rewards
+# APIs are down outside these hours (pilot/cost-pause; widen before real launch).
 resource "aws_iam_role" "scheduler" {
   count = var.enable_business_hours_schedule ? 1 : 0
   name  = "${var.slug}-scheduler-ec2"
@@ -32,7 +34,7 @@ resource "aws_iam_role_policy" "scheduler" {
 resource "aws_scheduler_schedule" "start" {
   count                        = var.enable_business_hours_schedule ? 1 : 0
   name                         = "${var.slug}-start"
-  description                  = "Start HongShing backend at the start of business hours"
+  description                  = "Start ${var.slug} backend at the start of business hours"
   schedule_expression          = var.schedule_start_cron
   schedule_expression_timezone = var.schedule_timezone
   flexible_time_window { mode = "OFF" }
@@ -46,7 +48,7 @@ resource "aws_scheduler_schedule" "start" {
 resource "aws_scheduler_schedule" "stop" {
   count                        = var.enable_business_hours_schedule ? 1 : 0
   name                         = "${var.slug}-stop"
-  description                  = "Stop HongShing backend at the end of business hours"
+  description                  = "Stop ${var.slug} backend at the end of business hours"
   schedule_expression          = var.schedule_stop_cron
   schedule_expression_timezone = var.schedule_timezone
   flexible_time_window { mode = "OFF" }
