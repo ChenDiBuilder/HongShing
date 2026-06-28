@@ -4,7 +4,7 @@
 # down outside these hours (pilot/cost-pause; widen before real launch).
 resource "aws_iam_role" "scheduler" {
   count = var.enable_business_hours_schedule ? 1 : 0
-  name  = "hongshing-scheduler-ec2"
+  name  = "${var.slug}-scheduler-ec2"
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
@@ -31,7 +31,7 @@ resource "aws_iam_role_policy" "scheduler" {
 
 resource "aws_scheduler_schedule" "start" {
   count                        = var.enable_business_hours_schedule ? 1 : 0
-  name                         = "hongshing-start"
+  name                         = "${var.slug}-start"
   description                  = "Start HongShing backend at the start of business hours"
   schedule_expression          = var.schedule_start_cron
   schedule_expression_timezone = var.schedule_timezone
@@ -45,7 +45,7 @@ resource "aws_scheduler_schedule" "start" {
 
 resource "aws_scheduler_schedule" "stop" {
   count                        = var.enable_business_hours_schedule ? 1 : 0
-  name                         = "hongshing-stop"
+  name                         = "${var.slug}-stop"
   description                  = "Stop HongShing backend at the end of business hours"
   schedule_expression          = var.schedule_stop_cron
   schedule_expression_timezone = var.schedule_timezone

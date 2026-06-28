@@ -10,7 +10,7 @@ data "aws_iam_policy_document" "ec2_assume" {
 }
 
 resource "aws_iam_role" "backend" {
-  name               = "hongshing-backend"
+  name               = "${var.slug}-backend"
   assume_role_policy = data.aws_iam_policy_document.ec2_assume.json
 }
 
@@ -40,13 +40,13 @@ resource "aws_iam_role_policy" "backend_sns" {
 }
 
 resource "aws_iam_instance_profile" "backend" {
-  name = "hongshing-backend"
+  name = "${var.slug}-backend"
   role = aws_iam_role.backend.name
 }
 
 # ── Security group ──
 resource "aws_security_group" "backend" {
-  name        = "hongshing-backend"
+  name        = "${var.slug}-backend"
   description = "HongShing single-box: web + SSH"
 
   ingress {
@@ -119,19 +119,22 @@ resource "aws_instance" "backend" {
     chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
     curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o /tmp/awscliv2.zip
     unzip -q /tmp/awscliv2.zip -d /tmp && /tmp/aws/install
-    mkdir -p /opt/hongshing/backups /opt/hongshing/www
+    mkdir -p /opt/${var.slug}/backups /opt/${var.slug}/www
     echo "user-data complete — run deploy.sh to bring up the app"
   EOF
   )
 
-  tags = { Name = "hongshing-backend" }
+  tags = { Name = "${var.slug}-backend" }
 
   # Same data-durability guardrails as the portal: most_recent AMI would
   # otherwise make a routine apply REPLACE the box and wipe the Postgres volume,
   # TLS cert, and .env. Absorb AMI/user_data drift; hard-block any destroy.
   lifecycle {
     prevent_destroy = true
-    ignore_changes  = [ami, user_data]
+    # ami/user_data: absorb most_recent-AMI drift (a replace would wipe the box).
+    # tags["Backup"]: the backup automation (DLM) tags the instance out-of-band —
+    # don't let a routine apply strip it.
+    ignore_changes = [ami, user_data, tags["Backup"]]
   }
 }
 

@@ -1,6 +1,6 @@
 # ── ECR for the backend image (deploy.sh builds + pushes; the box pulls) ──
 resource "aws_ecr_repository" "backend" {
-  name                 = "hongshing-backend"
+  name                 = "${var.slug}-backend"
   image_tag_mutability = "MUTABLE"
   force_delete         = true
 
