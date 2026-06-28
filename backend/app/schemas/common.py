@@ -48,6 +48,7 @@ class TokenResponse(BaseModel):
     access_token: str | None = None  # null when using HttpOnly cookies
     token_type: str = "bearer"
     user: "UserResponse"
+    must_change_password: bool = False
 
 
 class UserResponse(BaseModel):

@@ -1,17 +1,22 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
-from sqlalchemy import select
+from pydantic import BaseModel
+from sqlalchemy import select, update
 
 from app.config import get_settings
 from app.database import AsyncSession, get_db
+from app.middleware.auth import require_admin
 from app.models import RefreshToken, User
 from app.schemas.common import AdminLoginRequest, TokenResponse, UserResponse
 from app.services.auth_service import (
     create_access_token,
     create_refresh_token,
+    hash_password,
     hash_token,
     verify_password,
 )
 from datetime import datetime, timedelta, timezone
+
+ADMIN_ROLES = ["owner", "manager", "staff"]
 
 router = APIRouter()
 settings = get_settings()
@@ -76,7 +81,10 @@ async def admin_login(
             email=user.email,
             role=user.role,
             created_at=user.created_at,
-        )
+        ),
+        # A provisioned owner has password_changed_at=None until they rotate the
+        # temp password; the frontend uses this to force a change before access.
+        must_change_password=user.password_changed_at is None,
     )
 
 
@@ -139,4 +147,56 @@ async def admin_refresh(
         path="/api/admin/auth",
     )
 
+    return {"ok": True}
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
+@router.post("/change-password")
+async def admin_change_password(
+    body: ChangePasswordRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_admin(ADMIN_ROLES)),
+):
+    """Set a new admin password and stamp password_changed_at (clears the
+    force-change state). Also revokes outstanding refresh tokens so other
+    sessions can't keep riding the old credential."""
+    if not current_user.password_hash or not verify_password(
+        body.current_password, current_user.password_hash
+    ):
+        raise HTTPException(status_code=401, detail="Current password is incorrect")
+    if len(body.new_password) < 8:
+        raise HTTPException(status_code=400, detail="New password must be at least 8 characters")
+    if body.new_password == body.current_password:
+        raise HTTPException(status_code=400, detail="New password must differ from the current one")
+
+    current_user.password_hash = hash_password(body.new_password)
+    current_user.password_changed_at = datetime.now(timezone.utc)
+    await db.execute(
+        update(RefreshToken)
+        .where(RefreshToken.user_id == current_user.id, RefreshToken.revoked == False)  # noqa: E712
+        .values(revoked=True)
+    )
+    await db.commit()
+    return {"ok": True}
+
+
+@router.post("/logout")
+async def admin_logout(
+    request: Request, response: Response, db: AsyncSession = Depends(get_db)
+):
+    """Revoke the presented refresh token and clear the admin cookies."""
+    refresh_token_str = request.cookies.get("admin_refresh_token")
+    if refresh_token_str:
+        await db.execute(
+            update(RefreshToken)
+            .where(RefreshToken.token_hash == hash_token(refresh_token_str))
+            .values(revoked=True)
+        )
+        await db.commit()
+    response.delete_cookie("admin_access_token", path="/")
+    response.delete_cookie("admin_refresh_token", path="/api/admin/auth")
     return {"ok": True}
