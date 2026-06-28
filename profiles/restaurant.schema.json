@@ -1,0 +1,130 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://bridgewayinnovations.ca/schemas/restaurant-profile.json",
+  "title": "Restaurant Profile",
+  "description": "One profile fully describes a restaurant clone (PRD-11). Drives DB seed, infra, and branding.",
+  "type": "object",
+  "required": ["identity", "branding", "ordering", "rewards", "sms", "locale", "hours", "owner"],
+  "additionalProperties": false,
+  "properties": {
+    "identity": {
+      "type": "object",
+      "required": ["slug", "name", "domain"],
+      "additionalProperties": false,
+      "properties": {
+        "slug": { "type": "string", "pattern": "^[a-z0-9-]+$", "description": "Infra/subdomain/DB identifier" },
+        "name": { "type": "string" },
+        "legal_name": { "type": "string" },
+        "domain": { "type": "string", "format": "hostname", "description": "Demo: <slug>.demo.bridgewayinnovations.ca; customer domain at cutover" }
+      }
+    },
+    "branding": {
+      "type": "object",
+      "required": ["primary_color"],
+      "additionalProperties": false,
+      "properties": {
+        "logo": { "type": "string", "description": "Path relative to profiles/" },
+        "primary_color": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+        "secondary_color": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+        "copy": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "tagline": { "type": "string" },
+            "reward_success": { "type": "string" }
+          }
+        }
+      }
+    },
+    "ordering": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "external_url": { "type": "string" },
+        "provider": { "type": "string", "enum": ["", "toast", "square", "ubereats", "doordash", "custom"] },
+        "allow_without_signup": { "type": "boolean" }
+      }
+    },
+    "rewards": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "type"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string" },
+          "type": { "type": "string", "enum": ["percent", "fixed", "freebie"] },
+          "value": { "type": "number" },
+          "terms": { "type": "string" }
+        }
+      }
+    },
+    "campaigns": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["source"],
+        "additionalProperties": false,
+        "properties": { "source": { "type": "string" } }
+      }
+    },
+    "storefront": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": { "enabled": { "type": "boolean" } }
+    },
+    "sms": {
+      "type": "object",
+      "required": ["origination_number", "region"],
+      "additionalProperties": false,
+      "properties": {
+        "sender_id": { "type": "string" },
+        "origination_number": { "type": "string", "pattern": "^\\+[0-9]{8,15}$" },
+        "region": { "type": "string", "description": "AWS region where SNS is out of sandbox + the number lives, e.g. us-east-2" },
+        "templates": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "otp": { "type": "string" },
+            "reward": { "type": "string" }
+          }
+        }
+      }
+    },
+    "locale": {
+      "type": "object",
+      "required": ["timezone"],
+      "additionalProperties": false,
+      "properties": {
+        "timezone": { "type": "string", "description": "IANA timezone, e.g. America/Toronto" },
+        "languages": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "compliance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "privacy_contact_email": { "type": "string" },
+        "business_mailing_address": { "type": "string" }
+      }
+    },
+    "hours": {
+      "type": "object",
+      "required": ["open", "close"],
+      "additionalProperties": false,
+      "properties": {
+        "open": { "type": "string", "pattern": "^[0-2][0-9]:[0-5][0-9]$" },
+        "close": { "type": "string", "pattern": "^[0-2][0-9]:[0-5][0-9]$" }
+      }
+    },
+    "owner": {
+      "type": "object",
+      "required": ["email"],
+      "additionalProperties": false,
+      "properties": {
+        "email": { "type": "string", "format": "email" },
+        "name": { "type": "string" }
+      }
+    }
+  }
+}

@@ -1,0 +1,66 @@
+# HongShing — reference Restaurant Profile (PRD-11)
+#
+# The canonical example of a "restaurant-in-a-box" profile. One profile fully
+# describes a restaurant; the seeder (SCRUM-50) + provisioner (SCRUM-53) turn it
+# into a live isolated clone. Fields marked TODO are owner-supplied and still
+# unset for HongShing.
+#
+# Validate against profiles/restaurant.schema.json.
+
+identity:
+  slug: hongshing                 # lowercase, used for infra names + subdomain + DB
+  name: "Hong Shing"
+  legal_name: "Hong Shing Chinese Restaurant"     # TODO confirm
+  # Demo default; swap to the customer's own domain at cutover.
+  domain: hongshing.demo.bridgewayinnovations.ca
+
+branding:
+  logo: assets/hongshing/logo.png   # TODO add real logo (relative to profiles/)
+  primary_color: "#b91c1c"          # TODO confirm brand colors
+  secondary_color: "#1f2937"
+  copy:
+    tagline: "Join our rewards — perks on every order."   # TODO confirm
+    reward_success: "You're in! Here's your reward."
+
+ordering:
+  external_url: ""                  # TODO restaurant's existing online-ordering page
+  provider: ""                      # toast | square | ubereats | doordash | custom
+  allow_without_signup: true
+
+rewards:
+  - name: "10% off your next order"   # TODO confirm the real offer
+    type: percent                     # percent | fixed | freebie
+    value: 10
+    terms: "One per customer. Valid 30 days."
+
+campaigns:                          # QR acquisition sources
+  - source: table_tent
+  - source: counter
+  - source: receipt
+
+storefront:
+  enabled: false                    # native ordering — opt-in; redirect-mode demos skip it
+
+sms:
+  sender_id: "Hong Shing"
+  origination_number: "+12494218942"  # CA long code, provisioned in us-east-2 (out of sandbox)
+  region: us-east-2
+  templates:
+    otp: "Your {restaurant} verification code is {code}. It expires in 5 minutes."
+    reward: "{restaurant}: your reward is ready — {reward_code}. Order again: {ordering_url}"
+
+locale:
+  timezone: "America/Toronto"       # TODO confirm restaurant's actual timezone
+  languages: [en]
+
+compliance:
+  privacy_contact_email: ""         # TODO PIPEDA contact
+  business_mailing_address: ""      # TODO CASL — registered mailing address (required to send marketing SMS)
+
+hours:                              # drives the EC2 start/stop schedule
+  open: "11:00"                     # TODO confirm real open hours
+  close: "22:00"
+
+owner:
+  email: "daniel.chen@bridgewayinnovations.ca"   # demo admin; add the restaurant owner's account at cutover
+  name: "Daniel Chen"
