@@ -1,14 +1,15 @@
+import asyncio
+import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import text
 
 from app.config import get_settings
 
 settings = get_settings()
 from app.database import engine
-from app.models import Base
 from app.routes import (
     admin,
     admin_auth,
@@ -54,22 +55,49 @@ def _assert_prod_safety() -> None:
         )
 
 
+log = logging.getLogger("uvicorn.error")
+
+
+def _alembic_to_head(action: str) -> None:
+    """Run a blocking Alembic command (executed in a worker thread)."""
+    from alembic import command
+    from alembic.config import Config
+
+    backend_dir = Path(__file__).resolve().parent.parent  # app/ -> backend/
+    cfg = Config(str(backend_dir / "alembic.ini"))
+    cfg.set_main_option("script_location", str(backend_dir / "alembic"))
+    if action == "stamp":
+        command.stamp(cfg, "head")
+    else:
+        command.upgrade(cfg, "head")
+
+
+async def _run_migrations() -> None:
+    """Bring the schema to Alembic head on startup (single-box self-bootstrap).
+
+    Auto-adopts a legacy database that was built by the old create_all path: if
+    the app tables already exist but there is no alembic_version table, we stamp
+    the baseline (running it would fail on the existing tables) instead of
+    upgrading. Fresh databases get a full `upgrade head`; databases already under
+    Alembic get any new migrations applied. We deliberately do NOT swallow errors
+    here — a failed migration should surface, not look like success."""
+    from sqlalchemy import inspect
+
+    async with engine.connect() as conn:
+        has_schema = await conn.run_sync(lambda c: inspect(c).has_table("users"))
+        has_version = await conn.run_sync(lambda c: inspect(c).has_table("alembic_version"))
+
+    if has_schema and not has_version:
+        log.info("Existing schema without alembic_version — stamping baseline.")
+        await asyncio.to_thread(_alembic_to_head, "stamp")
+    else:
+        await asyncio.to_thread(_alembic_to_head, "upgrade")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     _assert_prod_safety()
-    try:
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-            try:
-                await conn.execute(text("ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS tags text[]"))
-            except Exception:
-                pass
-            try:
-                await conn.execute(text("ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS popular boolean DEFAULT false"))
-            except Exception:
-                pass
-    except Exception:
-        pass
+    await _run_migrations()
 
     from app.services.sms_service import _check_sms_capability
 

@@ -1,23 +1,54 @@
 """Alembic migration and database integrity tests."""
 
+import os
+import subprocess
+import sys
+import uuid
+from pathlib import Path
+
+import asyncpg
+
+
+def _test_db_url() -> str:
+    return os.getenv(
+        "TEST_DATABASE_URL",
+        "postgresql+asyncpg://fting@localhost:5432/hongshing_test",
+    )
+
 
 class TestAlembic:
-    def test_alembic_head_is_current(self):
-        """Verify Alembic can be upgraded to head on the test database."""
-        import subprocess
-        from pathlib import Path
+    async def test_migrations_build_schema_with_zero_drift(self):
+        """`alembic upgrade head` on an empty DB must build the full schema with
+        no drift from the models (`alembic check`). This is the deploy gate: if a
+        model changes without a matching migration, this fails."""
+        backend_dir = Path(__file__).resolve().parent.parent
+        base = _test_db_url().rsplit("/", 1)[0]            # postgresql+asyncpg://user@host:port
+        admin_dsn = base.replace("+asyncpg", "") + "/postgres"
+        tmp_db = f"hs_alembic_{uuid.uuid4().hex[:12]}"
 
-        backend_dir = Path(__file__).parent.parent
-        result = subprocess.run(
-            ["alembic", "current"],
-            cwd=backend_dir,
-            capture_output=True,
-            text=True,
-        )
-        # "current" shows the current revision; "head" would show pending upgrades
-        assert result.returncode == 0, f"alembic current failed: {result.stderr}"
-        # If there are pending migrations, "current" != "head"
-        # This test just verifies alembic can connect and run
+        conn = await asyncpg.connect(admin_dsn)
+        await conn.execute(f'CREATE DATABASE "{tmp_db}"')
+        await conn.close()
+        try:
+            env = {**os.environ, "DATABASE_URL": f"{base}/{tmp_db}"}
+            up = subprocess.run(
+                [sys.executable, "-m", "alembic", "upgrade", "head"],
+                cwd=backend_dir, env=env, capture_output=True, text=True,
+            )
+            assert up.returncode == 0, f"alembic upgrade head failed:\n{up.stderr}"
+
+            chk = subprocess.run(
+                [sys.executable, "-m", "alembic", "check"],
+                cwd=backend_dir, env=env, capture_output=True, text=True,
+            )
+            assert chk.returncode == 0, (
+                "models drifted from migrations — run "
+                "`alembic revision --autogenerate`:\n" + chk.stdout + chk.stderr
+            )
+        finally:
+            conn = await asyncpg.connect(admin_dsn)
+            await conn.execute(f'DROP DATABASE IF EXISTS "{tmp_db}" WITH (FORCE)')
+            await conn.close()
 
 
 class TestDatabaseSession:
