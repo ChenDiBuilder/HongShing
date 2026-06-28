@@ -2,7 +2,7 @@
 # Versioned, private S3 bucket for nightly pg_dump uploads (backup.sh). The
 # recovery path if the EBS volume / instance is lost.
 resource "aws_s3_bucket" "db_backups" {
-  bucket = "hongshing-db-backups-${data.aws_caller_identity.current.account_id}"
+  bucket = "${var.slug}-db-backups-${data.aws_caller_identity.current.account_id}"
 }
 
 resource "aws_s3_bucket_public_access_block" "db_backups" {

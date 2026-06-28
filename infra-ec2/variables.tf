@@ -4,6 +4,17 @@ variable "aws_region" {
   default     = "us-east-1"
 }
 
+# Per-restaurant identifier (PRD-11 / SCRUM-51). Drives all AWS resource names
+# (ECR repo, S3 backup bucket, IAM roles, SG, instance tag, schedules) and the
+# on-box app dir (/opt/<slug>). One slug = one isolated restaurant clone.
+# Provision a new restaurant with -var="slug=<name>" (+ a matching state key via
+# `terraform init -backend-config="key=<slug>/terraform.tfstate"`).
+variable "slug" {
+  description = "Restaurant slug — names every AWS resource for this clone"
+  type        = string
+  default     = "hongshing"
+}
+
 # vela.to is NOT in this account's Route 53 — only bridgewayinnovations.ca is —
 # so HongShing gets a subdomain there. nginx + Let's Encrypt serve TLS on the box.
 variable "domain_name" {
