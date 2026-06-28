@@ -1,0 +1,62 @@
+# Restaurant Profile — blank template (PRD-11)
+#
+# Copy to profiles/<slug>.yaml and fill in. One profile fully describes a new
+# restaurant. See profiles/README.md for the field reference and the onboarding
+# flow; validate against profiles/restaurant.schema.json.
+
+identity:
+  slug:                             # lowercase a-z0-9-, used for infra names + subdomain + DB
+  name:                            # display name, e.g. "Pho 99"
+  legal_name:
+  domain:                          # default <slug>.demo.bridgewayinnovations.ca; customer domain at cutover
+
+branding:
+  logo: assets/<slug>/logo.png
+  primary_color: "#000000"
+  secondary_color: "#ffffff"
+  copy:
+    tagline:
+    reward_success:
+
+ordering:
+  external_url:                    # existing online-ordering page to redirect to
+  provider:                        # toast | square | ubereats | doordash | custom
+  allow_without_signup: true
+
+rewards:
+  - name:
+    type: percent                  # percent | fixed | freebie
+    value: 10
+    terms:
+
+campaigns:
+  - source: table_tent
+  - source: counter
+  - source: receipt
+
+storefront:
+  enabled: false                   # native ordering — opt-in
+
+sms:
+  sender_id:                       # <= 11 chars where sender IDs are supported
+  origination_number:              # provisioned per restaurant (CA long code in us-east-2)
+  region: us-east-2
+  templates:
+    otp: "Your {restaurant} verification code is {code}. It expires in 5 minutes."
+    reward: "{restaurant}: your reward is ready — {reward_code}. Order again: {ordering_url}"
+
+locale:
+  timezone: "America/Toronto"
+  languages: [en]
+
+compliance:
+  privacy_contact_email:
+  business_mailing_address:        # required to send marketing SMS (CASL)
+
+hours:
+  open: "11:00"
+  close: "22:00"
+
+owner:
+  email:
+  name:
