@@ -119,7 +119,7 @@ async def seed_mock_data(
             status = "picked_up" if day_offset > 2 else statuses[j % 4]
 
             await db.execute(
-                text("INSERT INTO orders (id, user_id, total_cents, item_count, status, created_at, updated_at) VALUES (:id, :uid, :total, :cnt, :status, :ts, :ts)"),
+                text("INSERT INTO orders (id, user_id, subtotal_cents, total_cents, item_count, status, created_at, updated_at) VALUES (:id, :uid, :total, :total, :cnt, :status, :ts, :ts)"),
                 {"id": oid, "uid": customer_ids[idx], "total": total, "cnt": item_count, "status": status, "ts": order_ts},
             )
 
@@ -134,8 +134,10 @@ async def seed_mock_data(
                     {"id": str(uuid.uuid4()), "oid": oid, "name": name, "price": price, "qty": qty, "ts": order_ts},
                 )
 
+            # Correct both subtotal and total after the item loop (total is 0 at INSERT
+            # time). Mock orders carry no reward/tax, so subtotal == total.
             await db.execute(
-                text("UPDATE orders SET total_cents = :total, item_count = :cnt WHERE id = :oid"),
+                text("UPDATE orders SET subtotal_cents = :total, total_cents = :total, item_count = :cnt WHERE id = :oid"),
                 {"oid": oid, "total": total, "cnt": item_count},
             )
 
@@ -174,8 +176,10 @@ async def seed_mock_data(
         )
 
     for i in range(15):
+        # email_marketing_opt_in / push_enabled are NOT NULL with Python-only defaults
+        # (no server_default), so a raw INSERT must set them explicitly or it 500s.
         await db.execute(
-            text("INSERT INTO user_notification_preferences (id, user_id, sms_marketing_opt_in, sms_transactional_enabled, updated_at) VALUES (:id, :uid, :opt, true, :ts) ON CONFLICT (user_id) DO UPDATE SET sms_marketing_opt_in = :opt2"),
+            text("INSERT INTO user_notification_preferences (id, user_id, sms_marketing_opt_in, sms_transactional_enabled, email_marketing_opt_in, push_enabled, updated_at) VALUES (:id, :uid, :opt, true, false, false, :ts) ON CONFLICT (user_id) DO UPDATE SET sms_marketing_opt_in = :opt2"),
             {"id": str(uuid.uuid4()), "uid": customer_ids[i], "opt": i < 8, "opt2": i < 8, "ts": now},
         )
 

@@ -13,9 +13,16 @@ def generate_reward_code(prefix: str = "HS") -> str:
 
 
 def calculate_discount(discount_type: str, discount_value: int, subtotal_cents: int) -> int:
-    """Calculate discount in cents. Capped at subtotal for fixed discounts."""
-    if discount_type == "percentage":
-        return (subtotal_cents * discount_value) // 100
-    elif discount_type == "fixed":
+    """Discount in cents, clamped to [0, subtotal].
+
+    Accepts both "percent" (the Restaurant Profile / seeder value) and "percentage"
+    so a percent reward actually discounts — they were mismatched before. "fixed" is
+    a cents amount capped at the subtotal. Any other type (e.g. "freebie", handled
+    elsewhere) yields no monetary discount."""
+    if subtotal_cents <= 0 or discount_value <= 0:
+        return 0
+    if discount_type in ("percentage", "percent"):
+        return min((subtotal_cents * discount_value) // 100, subtotal_cents)
+    if discount_type == "fixed":
         return min(discount_value, subtotal_cents)
     return 0
