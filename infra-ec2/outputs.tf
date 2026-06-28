@@ -18,6 +18,11 @@ output "backup_bucket" {
   value       = aws_s3_bucket.db_backups.id
 }
 
+output "slug" {
+  description = "Restaurant slug — names every AWS resource + the on-box app dir (/opt/<slug>)"
+  value       = var.slug
+}
+
 output "fqdn" {
   description = "The single host this box serves"
   value       = local.fqdn
