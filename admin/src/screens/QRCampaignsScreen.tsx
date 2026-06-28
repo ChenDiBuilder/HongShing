@@ -5,7 +5,10 @@ const apiBase = import.meta.env.DEV ? "" : "/product-demo/hongshing";
 
 interface QRCampaign { id: string; name: string; source_code: string; landing_headline?: string; active: boolean; }
 
-const CUSTOMER_WEB_URL = "https://d1qkx0vmdo9wnw.cloudfront.net/product-demo/hongshing/";
+// Customer signup SPA is served at the root of this same host (admin lives at
+// /admin/), so derive the landing URL from the current origin — works on the
+// demo domain and a customer's own domain alike.
+const CUSTOMER_WEB_URL = `${window.location.origin}/`;
 function getLandingUrl(sourceCode: string) { return `${CUSTOMER_WEB_URL}?source=${encodeURIComponent(sourceCode)}`; }
 
 function QRCodes({ campaigns }: { campaigns: QRCampaign[] }) {
