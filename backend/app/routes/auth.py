@@ -149,7 +149,7 @@ async def verify_otp(
         value=access_token,
         max_age=ACCESS_TOKEN_MAX_AGE,
         httponly=True,
-        secure=True,
+        secure=settings.cookie_secure,
         samesite="lax",
         path="/",
     )
@@ -158,7 +158,7 @@ async def verify_otp(
         value=refresh_token_str,
         max_age=REFRESH_TOKEN_MAX_AGE,
         httponly=True,
-        secure=True,
+        secure=settings.cookie_secure,
         samesite="lax",
         path="/api/auth",
     )
@@ -220,7 +220,7 @@ async def refresh_token(
         value=access_token,
         max_age=ACCESS_TOKEN_MAX_AGE,
         httponly=True,
-        secure=True,
+        secure=settings.cookie_secure,
         samesite="lax",
         path="/",
     )
@@ -229,7 +229,7 @@ async def refresh_token(
         value=new_refresh_str,
         max_age=REFRESH_TOKEN_MAX_AGE,
         httponly=True,
-        secure=True,
+        secure=settings.cookie_secure,
         samesite="lax",
         path="/api/auth",
     )
