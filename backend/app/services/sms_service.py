@@ -8,6 +8,20 @@ settings = get_settings()
 
 SNS_RETRY_ATTEMPTS = 3
 
+DEFAULT_OTP_TEMPLATE = "Your {restaurant} verification code is {code}. It expires in 5 minutes."
+
+
+def render_otp_message(template: str | None, restaurant: str, code: str) -> str:
+    """Render the OTP SMS body from a profile-configured template (PRD-12 S3 /
+    SCRUM-60), falling back to the default. A malformed template (unknown/extra
+    placeholder) can never raise — it falls back to the default — so an OTP send
+    is never blocked by bad config."""
+    tmpl = template or DEFAULT_OTP_TEMPLATE
+    try:
+        return tmpl.format(restaurant=restaurant, code=code)
+    except (KeyError, IndexError, ValueError):
+        return DEFAULT_OTP_TEMPLATE.format(restaurant=restaurant, code=code)
+
 
 def _check_sms_capability() -> None:
     """Log SNS SMS account attributes to help diagnose delivery issues."""

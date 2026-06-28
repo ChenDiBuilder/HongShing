@@ -21,30 +21,30 @@ design decision, or a feature build.
 |---|---|---|
 | `identity.slug` | infra (TF `slug`, state key, resource names, `<slug>-backend-1`, `/opt/<slug>`) | ✅ |
 | `identity.name` | `restaurant_settings.restaurant_name`; reward `code_prefix` initials | ✅ |
-| `identity.legal_name` | — (read nowhere) | ❌ PRD-12 |
+| `identity.legal_name` | `restaurant_settings.legal_name` → landing-config + `/privacy` + customer footer | ✅ (SCRUM-66) |
 | `identity.domain` | infra (TF `fqdn`, nginx `server_name`, LE cert, Route53, `CORS_ORIGINS`) | ✅ |
-| `branding.logo` | `restaurant_settings.logo_url` — but a **relative** path is dropped to NULL (no asset pipeline) | ❌ PRD-12 |
+| `branding.logo` | `restaurant_settings.logo_url` — absolute URL served as-is; relative asset copied to box at provision (`/branding/<file>`) | ✅ (SCRUM-61) |
 | `branding.primary_color` | `restaurant_settings.primary_color` → `/api/landing-config` → SPA | ✅ |
 | `branding.secondary_color` | `restaurant_settings.secondary_color` → API (but no SPA CSS var consumes it) | ⚠️ partial |
-| `branding.copy.tagline` | — (SPA copy hardcoded) | ❌ PRD-12 |
-| `branding.copy.reward_success` | — (SPA copy hardcoded) | ❌ PRD-12 |
+| `branding.copy.tagline` | `restaurant_settings.tagline` → landing-config → home hero subtitle | ✅ (SCRUM-60) |
+| `branding.copy.reward_success` | `restaurant_settings.reward_success_copy` → landing-config → reward screen | ✅ (SCRUM-60) |
 | `ordering.external_url` | `restaurant_settings.external_ordering_url` → landing-config + redirects | ✅ |
 | `ordering.provider` | `restaurant_settings.external_ordering_provider` | ✅ |
 | `ordering.allow_without_signup` | `restaurant_settings.allow_order_without_signup` → landing-config | ✅ |
 | `rewards[].name/type/value` | `reward_templates.*`; first reward → `default_reward_template_id` | ✅ |
 | `rewards[].terms` | — (no column; `valid_days` also unsettable, always 30) | ❌ PRD-12 |
 | `campaigns[].source` | `qr_campaigns.source_code` + titleized `name` | ✅ |
-| `storefront.enabled` | — (storefront always built/shipped; nothing gates it) | ❌ PRD-12 |
+| `storefront.enabled` | `restaurant_settings.storefront_enabled` + gates deploy build/ship of the storefront SPA (nginx `/store/` 404s when off) | ✅ (SCRUM-63) |
 | `sms.sender_id` | `.env SNS_SENDER_ID` → backend (**fixed in SCRUM-54** — was overridden by compose literal) | ✅ (SCRUM-54) |
 | `sms.origination_number` | `.env` → compose → `config.sns_origination_number` | ✅ |
 | `sms.region` | `.env` → compose → boto3 region (compose default now `us-east-2`) | ✅ |
-| `sms.templates.otp` | — (OTP body hardcoded in `auth.py`; brand name IS profile-driven) | ❌ PRD-12 |
+| `sms.templates.otp` | `restaurant_settings.otp_sms_template` → `auth.py` OTP send (safe fallback on bad template) | ✅ (SCRUM-60) |
 | `sms.templates.reward` | — (no reward SMS is sent at all — missing feature) | ❌ PRD-12 |
 | `locale.timezone` | `restaurant_settings.timezone` (NOT propagated to the EC2 schedule) | ⚠️ partial |
-| `locale.languages` | — (no i18n) | ❌ PRD-12 |
+| `locale.languages` | `restaurant_settings.languages` (CSV) → landing-config → `<html lang>` seam (plumbing only) | ✅ (SCRUM-66) |
 | `compliance.privacy_contact_email` | `restaurant_settings.privacy_contact_email` → landing-config + `/privacy` | ✅ |
 | `compliance.support_phone` | `restaurant_settings.support_phone` → landing-config (**added in SCRUM-54**) | ✅ (SCRUM-54) |
-| `compliance.business_mailing_address` | — (CASL field, read nowhere) | ❌ PRD-12 |
+| `compliance.business_mailing_address` | `restaurant_settings.business_mailing_address` (seeded; CASL SMS footer use lands in SCRUM-64) | ✅ (SCRUM-66) |
 | `hours.open` / `hours.close` | — (documented to drive the EC2 start/stop schedule; provisioner never reads them) | ❌ PRD-12 |
 | `owner.email` | `users.email` (owner) + `.env OWNER_EMAIL` + certbot reg email | ✅ |
 | `owner.name` | `users.name` | ✅ |
@@ -68,21 +68,22 @@ per-campaign `landing_headline`/`landing_subtitle` (admin-UI only), reward
    schema + seeder (the `restaurant_settings` column already existed); the customer SPA's
    contact line now reflects the profile.
 
-## Tracked for follow-up → PRD-12 (Restaurant Template Completeness)
+## PRD-12 (Restaurant Template Completeness) — status
 
-- **Reward code prefix** still hardcoded `HS-` (`reward_service.py`) — the seeder already
-  computes a per-restaurant `code_prefix`; wire it through (every clone issues `HS-…` codes today).
-- **Reward short-link / order host** still `https://hongshing.ca/…` in `customer.py:167/187`
-  — needs a `public_domain` column + a decision on short-link host (restaurant domain vs a
-  dedicated short-link host).
-- **Brand copy + SMS templating** — `branding.copy.*`, `sms.templates.otp`, and the
-  (missing) reward-SMS feature; needs new columns + a CASL opt-in decision.
-- **Logo asset pipeline** — relative `branding.logo` paths need a provision-time
-  upload-to-served-URL step.
-- **`hours.*` → EC2 schedule** — pass the profile open/close into the TF start/stop crons.
-- **`storefront.enabled` gating**, **`locale.languages`/i18n**, **`identity.legal_name`**,
-  **`business_mailing_address`** — currently ignored.
-- **Admin/storefront `<title>`** static at build time (only customer-web updates it at runtime).
+**Done:** reward code prefix (SCRUM-58), reward short-link/order host → `public_domain`
+(SCRUM-59), frontend de-brand sweep incl. admin/storefront `<title>` + `secondary_color`
+consume (SCRUM-65), and — this PR — `branding.copy.*` + `sms.templates.otp` (SCRUM-60),
+`identity.legal_name` / `locale.languages` / `business_mailing_address` seeded (SCRUM-66),
+logo asset pipeline (SCRUM-61), `storefront.enabled` gating (SCRUM-63).
+
+**Remaining:**
+- **Reward-delivery SMS** — send `sms.templates.reward` on issuance, CASL-gated on consent +
+  `business_mailing_address` (SCRUM-64).
+- **Reward redemption discount** — wire `calculate_discount` into checkout (SCRUM-76) + money-path tests (SCRUM-75).
+- **`hours.*` → EC2 schedule** — drive the start/stop crons from the profile (SCRUM-62).
+- **Per-box routing** — retire `/product-demo/hongshing`; per-clone `VITE_API_BASE` + `DEMO_PREFIX` (SCRUM-77).
+- **`external_ordering_url` SPA consume** (SCRUM-78), **pre-seed profile validation** (SCRUM-79).
+- **`rewards[].terms` / `valid_days` / `min_order_cents`** and `secondary_color` CSS-var consume — still profile-unsettable / partial.
 - **Stale admin tests** (not a feature bug): `test_admin_crud` posted query params to
   `POST /api/admin/qr-campaigns` / `reward-templates`, which take JSON bodies — so the tests
   404'd/422'd while the admin UI (which sends JSON) works fine. Tests corrected to send bodies.

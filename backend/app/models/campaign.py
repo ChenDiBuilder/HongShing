@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, func
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, func, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -41,6 +41,23 @@ class RestaurantSettings(Base):
     pickup_estimate: Mapped[str | None] = mapped_column(String(80), nullable=True)
     tax_rate: Mapped[float | None] = mapped_column(Float, nullable=True)  # e.g. 0.13 (HST)
     currency_symbol: Mapped[str | None] = mapped_column(String(4), nullable=True)
+    # Profile-driven customer copy + OTP template (PRD-12 S3 / SCRUM-60). All
+    # nullable; the SPA / auth send path fall back to neutral defaults so a clone
+    # never shows HongShing-specific wording. Seeded from branding.copy / sms.templates.
+    tagline: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    reward_success_copy: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    otp_sms_template: Mapped[str | None] = mapped_column(String(320), nullable=True)
+    # Legal identity + locale (PRD-12 S9 / SCRUM-66). legal_name -> footer/privacy;
+    # business_mailing_address -> CASL SMS footer (consumed by SCRUM-64);
+    # languages -> CSV locale seam surfaced to the SPA (plumbing only, not translation).
+    legal_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    business_mailing_address: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    languages: Mapped[str | None] = mapped_column(String(100), nullable=True)  # CSV, e.g. "en,zh"
+    # Native storefront opt-in (PRD-12 S6 / SCRUM-63). Default off — redirect mode
+    # is the norm; provisioning only builds/serves the storefront SPA when true.
+    storefront_enabled: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=text("false")
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

@@ -73,7 +73,8 @@ export function Footer({ setPage, config }: { setPage: (p: any) => void; config?
   return (
     <footer className="border-t border-gray-100 bg-white">
       <div className="max-w-3xl mx-auto px-4 py-6 flex items-center justify-between text-xs text-gray-400">
-        <span>{config?.restaurant_name}</span>
+        {/* Prefer the registered legal name in the footer (PRD-12 S9); fall back to display name. */}
+        <span>© {new Date().getFullYear()} {config?.legal_name || config?.restaurant_name}</span>
         <div className="flex gap-4">
           <button onClick={() => setPage("terms")} className="hover:text-gray-600">Terms</button>
           <button onClick={() => setPage("privacy")} className="hover:text-gray-600">Privacy</button>

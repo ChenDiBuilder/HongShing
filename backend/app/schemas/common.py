@@ -87,6 +87,13 @@ class LandingConfigResponse(BaseModel):
     pickup_estimate: str | None = None
     tax_rate: float | None = None
     currency_symbol: str | None = None
+    # Profile-driven copy + legal/locale (PRD-12 S3/S9). otp_sms_template and
+    # business_mailing_address are intentionally NOT exposed (server-side only).
+    tagline: str | None = None
+    reward_success_copy: str | None = None
+    legal_name: str | None = None
+    languages: list[str] | None = None
+    storefront_enabled: bool = False
 
 
 class CampaignConfig(BaseModel):

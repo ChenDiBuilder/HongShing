@@ -11,12 +11,15 @@ identity:
   domain:                          # default <slug>.demo.bridgewayinnovations.ca; customer domain at cutover
 
 branding:
+  # logo: either an absolute URL (served as-is) OR a path relative to profiles/
+  # (the asset must exist under profiles/<path>; provision-restaurant.sh copies it
+  # onto the box and serves it at /branding/<file>). Omit for a name-only header.
   logo: assets/<slug>/logo.png
   primary_color: "#000000"
   secondary_color: "#ffffff"
   copy:
-    tagline:
-    reward_success:
+    tagline:                       # home hero subtitle (falls back to a neutral default)
+    reward_success:                # post-claim success line (falls back to a neutral default)
 
 ordering:
   external_url:                    # existing online-ordering page to redirect to

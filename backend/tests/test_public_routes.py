@@ -65,6 +65,37 @@ class TestLandingConfig:
         assert data["tax_rate"] == 0.05
         assert data["currency_symbol"] == "$"
 
+    async def test_surfaces_copy_legal_locale_storefront(self, client, db_session):
+        """PRD-12 S3/S6/S9 — tagline/reward_success_copy/legal_name/languages/
+        storefront_enabled reach the SPA; otp_sms_template and
+        business_mailing_address are intentionally NOT exposed."""
+        from app.models import RestaurantSettings
+
+        settings = RestaurantSettings(
+            id="00000000-0000-0000-0000-000000000001",
+            restaurant_name="Test Restaurant",
+            primary_color="#0000FF",
+            tagline="Order ahead, earn perks.",
+            reward_success_copy="Reward unlocked!",
+            otp_sms_template="Code {code} for {restaurant}.",
+            legal_name="Test Restaurant Inc.",
+            business_mailing_address="1 Test St, Toronto",
+            languages="en,zh",
+            storefront_enabled=True,
+        )
+        db_session.add(settings)
+        await db_session.flush()
+
+        data = (await client.get("/api/public/landing-config")).json()
+        assert data["tagline"] == "Order ahead, earn perks."
+        assert data["reward_success_copy"] == "Reward unlocked!"
+        assert data["legal_name"] == "Test Restaurant Inc."
+        assert data["languages"] == ["en", "zh"]
+        assert data["storefront_enabled"] is True
+        # Server-side-only fields must never leak to the public SPA.
+        assert "otp_sms_template" not in data
+        assert "business_mailing_address" not in data
+
     async def test_bad_hours_json_does_not_500(self, client, db_session):
         from app.models import RestaurantSettings
 

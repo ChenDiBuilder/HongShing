@@ -11,13 +11,21 @@ from app.cli.seed_restaurant import seed_restaurant
 from app.models import Base, QRCampaign, RestaurantSettings, RewardTemplate, User
 
 PROFILE = """\
-identity: {slug: testaurant, name: "Test Bistro", domain: testaurant.demo.bridgewayinnovations.ca}
-branding: {primary_color: "#123456", logo: "assets/testaurant/logo.png"}
+identity: {slug: testaurant, name: "Test Bistro", legal_name: "Test Bistro Inc.", domain: testaurant.demo.bridgewayinnovations.ca}
+branding:
+  primary_color: "#123456"
+  logo: "assets/testaurant/logo.png"
+  copy: {tagline: "Order ahead, earn perks.", reward_success: "Reward unlocked!"}
 ordering: {external_url: "https://order.example.com/test", provider: toast, allow_without_signup: true}
 rewards: [{name: "10% off your order", type: percent, value: 10}]
 campaigns: [{source: table_tent}, {source: counter}]
-sms: {origination_number: "+12494218942", region: us-east-2}
-locale: {timezone: "America/Toronto"}
+storefront: {enabled: true}
+sms:
+  origination_number: "+12494218942"
+  region: us-east-2
+  templates: {otp: "Code {code} for {restaurant}."}
+locale: {timezone: "America/Toronto", languages: [en, zh]}
+compliance: {business_mailing_address: "1 Test St, Toronto, ON M5G 1Z4"}
 location:
   address: "1 Test St, Toronto, ON"
   phone: "+14165550123"
@@ -81,6 +89,16 @@ async def test_seed_populates_all_layers(factory, tmp_path):
         assert json.loads(settings.hours_json) == {"Mon": "11:00 AM – 9:00 PM", "Tue": "Closed"}
         assert settings.tax_rate == 0.13
         assert settings.currency_symbol == "$"
+        # PRD-12 S3 copy + OTP template (SCRUM-60)
+        assert settings.tagline == "Order ahead, earn perks."
+        assert settings.reward_success_copy == "Reward unlocked!"
+        assert settings.otp_sms_template == "Code {code} for {restaurant}."
+        # PRD-12 S9 legal/locale (SCRUM-66)
+        assert settings.legal_name == "Test Bistro Inc."
+        assert settings.business_mailing_address == "1 Test St, Toronto, ON M5G 1Z4"
+        assert settings.languages == "en,zh"
+        # PRD-12 S6 storefront opt-in (SCRUM-63)
+        assert settings.storefront_enabled is True
 
         reward = (await s.execute(select(RewardTemplate))).scalar_one()
         assert reward.name == "10% off your order"
@@ -94,6 +112,34 @@ async def test_seed_populates_all_layers(factory, tmp_path):
         owner = (await s.execute(select(User).where(User.role == "owner"))).scalar_one()
         assert owner.email == "owner@test.example"
         assert owner.password_changed_at is None  # forces reset on first login
+
+
+async def test_seed_logo_pipeline(factory, tmp_path):
+    """PRD-12 S4 (SCRUM-61): absolute branding.logo is served verbatim; a relative
+    asset uses the provisioner-supplied --logo-url served path; relative with no
+    override stays NULL (neutral)."""
+    # Relative path + served-path override (the provision-time copy case).
+    rel = tmp_path / "rel.yaml"
+    rel.write_text(PROFILE)
+    await seed_restaurant(
+        str(rel), owner_password="pw123456", session_factory=factory,
+        logo_url="/branding/logo.png",
+    )
+    async with factory() as s:
+        assert (await s.execute(select(RestaurantSettings))).scalar_one().logo_url == "/branding/logo.png"
+
+    # Absolute URL in the profile is used as-is and ignores the override.
+    abs_profile = PROFILE.replace(
+        'logo: "assets/testaurant/logo.png"', 'logo: "https://cdn.example.com/x/logo.png"'
+    )
+    ap = tmp_path / "abs.yaml"
+    ap.write_text(abs_profile)
+    await seed_restaurant(
+        str(ap), owner_password="pw123456", session_factory=factory,
+        logo_url="/branding/ignored.png",
+    )
+    async with factory() as s:
+        assert (await s.execute(select(RestaurantSettings))).scalar_one().logo_url == "https://cdn.example.com/x/logo.png"
 
 
 async def test_seed_is_idempotent(factory, tmp_path):

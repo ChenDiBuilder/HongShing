@@ -112,7 +112,7 @@ export function OtpPage({ phone, setOtp, otp, loading, error, handleVerify, setP
   );
 }
 
-export function RewardPage({ rewardCode, setPage, primaryColor, loadMenu, loadRewards, profile, handleLogout }: any) {
+export function RewardPage({ rewardCode, setPage, primaryColor, rewardSuccessCopy, loadMenu, loadRewards, profile, handleLogout }: any) {
   const reward = profile?.rewards?.[0];
 
   return (
@@ -121,7 +121,7 @@ export function RewardPage({ rewardCode, setPage, primaryColor, loadMenu, loadRe
         <div className="w-full max-w-sm text-center">
           <div className="text-5xl mb-4">🎉</div>
           <h1 className="text-2xl font-bold mb-2" style={{ color: primaryColor }}>Welcome back{profile?.name ? `, ${profile.name}` : ""}!</h1>
-          <p className="text-gray-600 mb-6">Your rewards and order history are ready.</p>
+          <p className="text-gray-600 mb-6">{rewardSuccessCopy || "Your rewards and order history are ready."}</p>
 
           {reward ? (
             <div className="bg-gray-50 rounded-2xl p-5 mb-6 text-left">
