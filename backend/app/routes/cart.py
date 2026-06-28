@@ -118,7 +118,13 @@ async def update_cart_item(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_customer),
 ):
-    result = await db.execute(select(CartItem).where(CartItem.id == item_id))
+    # Scope the lookup to the caller's own cart so one customer can't read or
+    # mutate another's cart items by guessing an item id (IDOR).
+    result = await db.execute(
+        select(CartItem)
+        .join(Cart, CartItem.cart_id == Cart.id)
+        .where(CartItem.id == item_id, Cart.user_id == current_user.id)
+    )
     item = result.scalar_one_or_none()
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
@@ -137,7 +143,13 @@ async def remove_from_cart(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_customer),
 ):
-    result = await db.execute(select(CartItem).where(CartItem.id == item_id))
+    # Scope the lookup to the caller's own cart so one customer can't read or
+    # mutate another's cart items by guessing an item id (IDOR).
+    result = await db.execute(
+        select(CartItem)
+        .join(Cart, CartItem.cart_id == Cart.id)
+        .where(CartItem.id == item_id, Cart.user_id == current_user.id)
+    )
     item = result.scalar_one_or_none()
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")

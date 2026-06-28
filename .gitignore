@@ -34,6 +34,11 @@ hongshing_backend.egg-info/
 .env.local
 .env.production
 
+# One-off ops/seed scripts — kept out of version control because they have
+# historically held inline DB credentials. Seed prod via POST /api/admin/seed-mock-data.
+seed_prod.py
+*_prod.py
+
 
 # Walkthrough demo screenshots are committed docs assets (exception to *.png above)
 !docs/walkthrough/img/*.png

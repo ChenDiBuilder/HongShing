@@ -30,11 +30,16 @@ export default function OrdersScreen({ statusFilter: initial }: Props) {
 
   async function load() {
     setLoading(true);
-    const params = statusFilter ? `?status=${statusFilter}` : "";
-    const r = await fetch(`${apiBase}/api/admin/orders${params}`, { credentials: "include" });
-    const d = await r.json();
-    setOrders(d.data?.items || []);
-    setLoading(false);
+    try {
+      const params = statusFilter ? `?status=${statusFilter}` : "";
+      const r = await fetch(`${apiBase}/api/admin/orders${params}`, { credentials: "include" });
+      const d = await r.json();
+      setOrders(d.data?.items || []);
+    } catch {
+      setOrders([]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => { load(); }, [statusFilter]);
