@@ -57,3 +57,34 @@ class TestDiscountCalculation:
 
     def test_zero_subtotal(self):
         assert calculate_discount("percentage", 50, 0) == 0
+
+
+class TestRewardSms:
+    """CASL reward-SMS gate + render (PRD-12 S7 / SCRUM-64)."""
+
+    def test_gate_sends_only_when_all_present(self):
+        from app.services.reward_service import should_send_reward_sms
+
+        assert should_send_reward_sms(True, "1 St", "tmpl", "+1") is True
+        assert should_send_reward_sms(False, "1 St", "tmpl", "+1") is False  # no consent
+        assert should_send_reward_sms(True, "", "tmpl", "+1") is False       # no address
+        assert should_send_reward_sms(True, "1 St", None, "+1") is False     # no template
+        assert should_send_reward_sms(True, "1 St", "tmpl", None) is False   # no phone
+
+    def test_render_includes_code_and_casl_footer(self):
+        from app.services.reward_service import render_reward_sms
+
+        msg = render_reward_sms(
+            "{restaurant}: reward {reward_code} — {ordering_url}",
+            "Pho 99", "PH-ABC123", "https://pho99.ca/order", "1 King St, Toronto",
+        )
+        assert "PH-ABC123" in msg
+        assert "1 King St, Toronto" in msg          # CASL mailing address in footer
+        assert "STOP" in msg                         # opt-out hint
+
+    def test_render_falls_back_on_bad_template(self):
+        from app.services.reward_service import DEFAULT_REWARD_SMS_TEMPLATE, render_reward_sms
+
+        msg = render_reward_sms("{unknown}", "Pho 99", "PH-1", "u", "addr")
+        assert "PH-1" in msg
+        assert DEFAULT_REWARD_SMS_TEMPLATE.split("{")[0] in msg

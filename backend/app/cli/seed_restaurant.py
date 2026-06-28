@@ -137,6 +137,7 @@ async def seed_restaurant(
             tagline=copy.get("tagline") or None,
             reward_success_copy=copy.get("reward_success") or None,
             otp_sms_template=sms_templates.get("otp") or None,
+            reward_sms_template=sms_templates.get("reward") or None,
             # PRD-12 S9 legal/locale (SCRUM-66)
             legal_name=ident.get("legal_name") or None,
             business_mailing_address=compliance.get("business_mailing_address") or None,
