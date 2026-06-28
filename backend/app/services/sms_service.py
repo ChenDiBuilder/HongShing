@@ -12,7 +12,7 @@ SNS_RETRY_ATTEMPTS = 3
 def _check_sms_capability() -> None:
     """Log SNS SMS account attributes to help diagnose delivery issues."""
     try:
-        client = boto3.client("sns", region_name=settings.aws_region)
+        client = boto3.client("sns", region_name=settings.sns_region or settings.aws_region)
         attrs = client.get_sms_attributes()
         spend_limit = attrs.get("attributes", {}).get("MonthlySpendLimit", "unknown")
         account_status = attrs.get("attributes", {}).get("DefaultSMSType", "unknown")
@@ -33,7 +33,7 @@ def send_sms(phone: str, message: str) -> None:
     print(f"[SMS] Sending: to={phone} origination={orig_number} sender_id={sender_id}")
 
     try:
-        client = boto3.client("sns", region_name=settings.aws_region)
+        client = boto3.client("sns", region_name=settings.sns_region or settings.aws_region)
         attrs = {
             "AWS.SNS.SMS.SMSType": {
                 "DataType": "String",
