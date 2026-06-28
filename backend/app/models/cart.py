@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Integer, String, func
+from sqlalchemy import DateTime, Index, Integer, String, UniqueConstraint, func, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -14,6 +14,16 @@ def new_uuid() -> str:
 
 class Cart(Base):
     __tablename__ = "carts"
+    __table_args__ = (
+        # At most one active cart per user. Closes the duplicate-active-cart race
+        # (two fast "add" taps) at the DB level, so checkout can't read the wrong cart.
+        Index(
+            "uq_carts_one_active_per_user",
+            "user_id",
+            unique=True,
+            postgresql_where=text("is_active"),
+        ),
+    )
 
     id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=new_uuid)
     user_id: Mapped[str] = mapped_column(UUID(as_uuid=False), nullable=False)
@@ -26,6 +36,11 @@ class Cart(Base):
 
 class CartItem(Base):
     __tablename__ = "cart_items"
+    __table_args__ = (
+        # One row per (cart, menu item) so concurrent adds upsert-merge the
+        # quantity instead of creating duplicate line items.
+        UniqueConstraint("cart_id", "menu_item_id", name="uq_cart_items_cart_menu"),
+    )
 
     id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=new_uuid)
     cart_id: Mapped[str] = mapped_column(UUID(as_uuid=False), nullable=False)

@@ -3,7 +3,8 @@
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import select, text
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.database import AsyncSession, get_db
 from app.middleware.auth import require_customer
@@ -148,17 +149,56 @@ async def claim_reward(
 
     expires_at = datetime.now(timezone.utc) + timedelta(days=template.valid_days)
 
-    reward = Reward(
-        user_id=current_user.id,
-        reward_template_id=template.id,
-        code=code,
-        source_code=body.source_code,
-        qr_campaign_id=body.campaign_id,
-        status="issued",
-        expires_at=expires_at,
-    )
-    db.add(reward)
-    await db.flush()
+    # Race-safe issue: the partial unique index allows one ISSUED reward per
+    # (user, template). If a concurrent claim already won, on_conflict_do_nothing
+    # returns no id and we hand back that existing reward instead of 500-ing.
+    new_id = (
+        await db.execute(
+            pg_insert(Reward)
+            .values(
+                user_id=current_user.id,
+                reward_template_id=template.id,
+                code=code,
+                source_code=body.source_code,
+                qr_campaign_id=body.campaign_id,
+                status="issued",
+                expires_at=expires_at,
+            )
+            .on_conflict_do_nothing(
+                index_elements=["user_id", "reward_template_id"],
+                index_where=text("status = 'issued'"),
+            )
+            .returning(Reward.id)
+        )
+    ).scalar()
+
+    if new_id is None:
+        existing = (
+            await db.execute(
+                select(Reward).where(
+                    Reward.user_id == current_user.id,
+                    Reward.reward_template_id == template.id,
+                    Reward.status == "issued",
+                )
+            )
+        ).scalars().first()
+        await db.commit()
+        return ClaimRewardResponse(
+            reward=RewardResponse(
+                id=existing.id,
+                code=existing.code,
+                status=existing.status,
+                reward_type=template.reward_type,
+                reward_value=template.reward_value,
+                issued_at=existing.issued_at,
+                expires_at=existing.expires_at,
+            ),
+            short_link=None,
+        )
+
+    reward = (
+        await db.execute(select(Reward).where(Reward.id == new_id))
+    ).scalar_one()
 
     # Create short link
     short_code = code[3:].lower()

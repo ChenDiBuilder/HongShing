@@ -58,29 +58,47 @@ def _assert_prod_safety() -> None:
 log = logging.getLogger("uvicorn.error")
 
 
-def _alembic_to_head(action: str) -> None:
-    """Run a blocking Alembic command (executed in a worker thread)."""
-    from alembic import command
+def _alembic_config():
     from alembic.config import Config
 
     backend_dir = Path(__file__).resolve().parent.parent  # app/ -> backend/
     cfg = Config(str(backend_dir / "alembic.ini"))
     cfg.set_main_option("script_location", str(backend_dir / "alembic"))
-    if action == "stamp":
-        command.stamp(cfg, "head")
-    else:
-        command.upgrade(cfg, "head")
+    return cfg
+
+
+def _alembic_upgrade_head() -> None:
+    """Apply all pending migrations (blocking; run in a worker thread)."""
+    from alembic import command
+
+    command.upgrade(_alembic_config(), "head")
+
+
+def _alembic_adopt_legacy() -> None:
+    """Adopt a create_all-built database into Alembic without re-creating it.
+
+    The legacy schema matches the Alembic BASELINE, so we stamp the baseline
+    revision (NOT head — that would skip any post-baseline migrations) and then
+    upgrade, which applies everything created after the baseline (e.g. the
+    uniqueness-index migration)."""
+    from alembic import command
+    from alembic.script import ScriptDirectory
+
+    cfg = _alembic_config()
+    base_rev = ScriptDirectory.from_config(cfg).get_base()
+    command.stamp(cfg, base_rev)
+    command.upgrade(cfg, "head")
 
 
 async def _run_migrations() -> None:
     """Bring the schema to Alembic head on startup (single-box self-bootstrap).
 
-    Auto-adopts a legacy database that was built by the old create_all path: if
-    the app tables already exist but there is no alembic_version table, we stamp
-    the baseline (running it would fail on the existing tables) instead of
-    upgrading. Fresh databases get a full `upgrade head`; databases already under
-    Alembic get any new migrations applied. We deliberately do NOT swallow errors
-    here — a failed migration should surface, not look like success."""
+    - Fresh database (no schema): `upgrade head` builds everything.
+    - Legacy create_all database (schema present, no alembic_version): stamp the
+      baseline then upgrade, so post-baseline migrations still apply.
+    - Already under Alembic: `upgrade head` applies new migrations.
+
+    Errors are deliberately NOT swallowed — a failed migration must surface."""
     from sqlalchemy import inspect
 
     async with engine.connect() as conn:
@@ -88,10 +106,10 @@ async def _run_migrations() -> None:
         has_version = await conn.run_sync(lambda c: inspect(c).has_table("alembic_version"))
 
     if has_schema and not has_version:
-        log.info("Existing schema without alembic_version — stamping baseline.")
-        await asyncio.to_thread(_alembic_to_head, "stamp")
+        log.info("Existing schema without alembic_version — adopting (stamp baseline + upgrade).")
+        await asyncio.to_thread(_alembic_adopt_legacy)
     else:
-        await asyncio.to_thread(_alembic_to_head, "upgrade")
+        await asyncio.to_thread(_alembic_upgrade_head)
 
 
 @asynccontextmanager

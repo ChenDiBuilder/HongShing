@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, JSON, String, Text, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, JSON, String, Text, func, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -28,6 +28,18 @@ class RewardTemplate(Base):
 
 class Reward(Base):
     __tablename__ = "rewards"
+    __table_args__ = (
+        # At most one ISSUED reward per (user, template) — matches the claim
+        # dedup and stops a double-claim race. A redeemed/expired reward does not
+        # block a future re-issue (partial index on status='issued' only).
+        Index(
+            "uq_rewards_one_issued_per_user_template",
+            "user_id",
+            "reward_template_id",
+            unique=True,
+            postgresql_where=text("status = 'issued'"),
+        ),
+    )
 
     id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("users.id"))
