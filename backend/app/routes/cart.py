@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import select, text
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.database import AsyncSession, get_db
 from app.middleware.auth import require_customer
@@ -74,39 +75,38 @@ async def add_to_cart(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_customer),
 ):
-    result = await db.execute(
-        select(Cart)
-        .where(Cart.user_id == current_user.id, Cart.is_active == True)
-        .order_by(Cart.created_at.desc())
+    # Atomically get-or-create the user's single active cart. The partial unique
+    # index uq_carts_one_active_per_user guarantees at most one, so concurrent
+    # "add" taps converge on the same cart instead of creating duplicates.
+    await db.execute(
+        pg_insert(Cart)
+        .values(user_id=current_user.id)
+        .on_conflict_do_nothing(index_elements=["user_id"], index_where=text("is_active"))
     )
-    # Use the newest active cart and tolerate duplicates: a non-atomic get-or-create
-    # in add_to_cart can race two rapid adds into two active carts; scalar_one_or_none
-    # would then raise MultipleResultsFound and 500 every checkout for that user.
-    cart = result.scalars().first()
-    if not cart:
-        cart = Cart(user_id=current_user.id)
-        db.add(cart)
-        await db.flush()
-
-    # Check if item already in cart
-    existing = await db.execute(
-        select(CartItem).where(
-            CartItem.cart_id == cart.id, CartItem.menu_item_id == body.menu_item_id
+    cart = (
+        await db.execute(
+            select(Cart)
+            .where(Cart.user_id == current_user.id, Cart.is_active == True)  # noqa: E712
+            .order_by(Cart.created_at.desc())
         )
-    )
-    item = existing.scalar_one_or_none()
-    if item:
-        item.quantity += body.quantity
-    else:
-        item = CartItem(
+    ).scalars().first()
+
+    # Upsert the line item: a concurrent add of the same item merges the quantity
+    # (uq_cart_items_cart_menu) rather than creating a duplicate line.
+    await db.execute(
+        pg_insert(CartItem)
+        .values(
             cart_id=cart.id,
             menu_item_id=body.menu_item_id,
             name=body.name,
             price_cents=body.price_cents,
             quantity=body.quantity,
         )
-        db.add(item)
-
+        .on_conflict_do_update(
+            index_elements=["cart_id", "menu_item_id"],
+            set_={"quantity": CartItem.quantity + body.quantity},
+        )
+    )
     await db.commit()
     return {"ok": True}
 

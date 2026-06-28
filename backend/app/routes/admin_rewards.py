@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 
 from app.database import AsyncSession, get_db
 from app.middleware.auth import require_admin
@@ -143,17 +143,25 @@ async def redeem_reward(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_admin(["owner", "manager", "staff"])),
 ):
-    result = await db.execute(select(Reward).where(Reward.id == reward_id))
-    reward = result.scalar_one_or_none()
-    if not reward:
-        raise HTTPException(status_code=404, detail="Reward not found")
-    if reward.status != "issued":
-        raise HTTPException(status_code=400, detail=f"Reward is {reward.status}")
-
     from datetime import datetime, timezone
 
-    reward.status = "redeemed"
-    reward.redeemed_at = datetime.now(timezone.utc)
-    reward.redemption_source = "manual"
+    # Atomic conditional redemption: only the first concurrent request that still
+    # sees status='issued' flips it, so a reward can't be double-redeemed.
+    result = await db.execute(
+        update(Reward)
+        .where(Reward.id == reward_id, Reward.status == "issued")
+        .values(
+            status="redeemed",
+            redeemed_at=datetime.now(timezone.utc),
+            redemption_source="manual",
+        )
+    )
+    if result.rowcount == 0:
+        existing = (
+            await db.execute(select(Reward).where(Reward.id == reward_id))
+        ).scalar_one_or_none()
+        if not existing:
+            raise HTTPException(status_code=404, detail="Reward not found")
+        raise HTTPException(status_code=400, detail=f"Reward is {existing.status}")
     await db.commit()
     return {"ok": True}
