@@ -27,6 +27,7 @@ export function Header({ config, profile, itemCount, subtotalCents, setPage, loa
       <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
         <button onClick={() => { loadMenu(); setPage("menu"); }}
           className="flex items-center gap-2">
+          {config?.logo_url && <img src={config.logo_url} alt="" className="h-9 w-9 rounded-md object-contain" />}
           <span className="text-lg font-extrabold tracking-tight" style={{ color: primary }}>{config?.restaurant_name || "Restaurant"}</span>
         </button>
         <nav className="flex items-center gap-1">
