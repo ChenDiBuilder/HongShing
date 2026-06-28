@@ -35,8 +35,27 @@ from app.routes.reservations import router as reservations_router
 from app.routes.cart import router as cart_router
 
 
+def _assert_prod_safety() -> None:
+    """Fail fast at startup if production is running with insecure dev defaults."""
+    if settings.app_env != "production":
+        return
+    problems = []
+    if settings.hardcoded_otp:
+        problems.append('HARDCODED_OTP must be empty in production (set HARDCODED_OTP="")')
+    if settings.secret_key == "change-me-in-production":
+        problems.append("SECRET_KEY is still the insecure default")
+    if settings.otp_pepper == "change-me-in-production":
+        problems.append("OTP_PEPPER is still the insecure default")
+    if problems:
+        raise RuntimeError(
+            "Refusing to start in production with unsafe configuration: "
+            + "; ".join(problems)
+        )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    _assert_prod_safety()
     try:
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)

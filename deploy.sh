@@ -85,6 +85,12 @@ docker compose -f docker-compose.prod.yml up -d
 # Nightly backup cron (idempotent).
 chmod +x "$APP_DIR/backup.sh"
 ( crontab -l 2>/dev/null | grep -v "$APP_DIR/backup.sh"; echo "0 2 * * * $APP_DIR/backup.sh >> $APP_DIR/backups/backup.log 2>&1" ) | crontab -
+
+# TLS auto-renewal cron (idempotent). The cert was issued via certbot --standalone,
+# which needs port 80 — so the hooks stop/start the nginx container around renewal.
+# certbot only runs the hooks when a cert is actually due (within 30 days of expiry),
+# so this is NOT nightly downtime: nginx blips ~once per 60 days at 03:00.
+( crontab -l 2>/dev/null | grep -v 'certbot renew'; echo "0 3 * * * sudo certbot renew --quiet --standalone --pre-hook 'cd $APP_DIR && docker compose -f docker-compose.prod.yml stop nginx' --post-hook 'cd $APP_DIR && docker compose -f docker-compose.prod.yml start nginx' >> $APP_DIR/certbot-renew.log 2>&1" ) | crontab -
 echo "Deployed. Containers:"; docker compose -f docker-compose.prod.yml ps
 ENDSSH
 echo "Done → https://$FQDN"
