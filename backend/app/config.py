@@ -11,6 +11,12 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://fting@localhost:5432/hongshing"
     cors_origins: str = "http://localhost:3500,http://localhost:3501"
 
+    # URL path prefix the app is served under (PRD-12 / SCRUM-77). Empty for the
+    # per-box model (nginx serves at the host root); the strip_demo_prefix
+    # middleware is a no-op when this is "". Set DEMO_PREFIX only for a legacy
+    # path-prefixed host.
+    demo_prefix: str = ""
+
     aws_region: str = "us-east-1"
     s3_bucket: str = "hongshing-assets"
     cloudfront_url: str = ""

@@ -62,8 +62,11 @@ if [ "$STOREFRONT_ENABLED" = "true" ]; then
 else
   echo "  storefront disabled (storefront.enabled=false) — skipping build + ship"
 fi
+# Per-box routing (PRD-12 / SCRUM-77): SPA and API are same-origin behind nginx, so
+# bake an empty API base (and customer base "/"). A future hosted/path-prefixed box can
+# override VITE_API_BASE / VITE_BASE without code changes.
 for app in "${SPAS[@]}"; do
-  ( cd "$HERE/$app" && npm ci && npm run build )
+  ( cd "$HERE/$app" && npm ci && VITE_API_BASE="${VITE_API_BASE:-}" VITE_BASE="${VITE_BASE:-/}" npm run build )
 done
 
 echo "=== Ship app files ==="

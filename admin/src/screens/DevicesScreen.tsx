@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 
-const apiBase = import.meta.env.DEV ? "" : "/product-demo/hongshing";
+const apiBase = import.meta.env.VITE_API_BASE ?? "";
 
 interface Device { id: string; name: string; location?: string; status: string; paired_at?: string; created_at: string; }
 

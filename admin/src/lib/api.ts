@@ -1,4 +1,4 @@
-const apiBase = import.meta.env.DEV ? "" : "/product-demo/hongshing";
+const apiBase = import.meta.env.VITE_API_BASE ?? "";
 
 async function request<T>(
   method: string,

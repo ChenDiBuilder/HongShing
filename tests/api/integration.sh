@@ -4,7 +4,7 @@
 # Usage: bash tests/integration.sh
 set -euo pipefail
 
-BASE="https://d1qkx0vmdo9wnw.cloudfront.net/product-demo/hongshing"
+BASE="https://hongshing.demo.bridgewayinnovations.ca"
 PASS=0
 FAIL=0
 RED='\033[0;31m'
