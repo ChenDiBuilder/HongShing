@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import func, select
 
-from app.models import Cart, CartItem, Reward, RewardTemplate
+from app.models import Cart, CartItem, RestaurantSettings, Reward, RewardTemplate
 from app.services.auth_service import create_access_token
 
 ITEM_A = "11111111-1111-1111-1111-111111111111"
@@ -91,3 +91,26 @@ class TestRewardRedemption:
 
         assert first.status_code == 200
         assert second.status_code == 400  # already redeemed — not redeemed twice
+
+
+class TestRewardBranding:
+    async def test_claim_uses_template_prefix_and_clone_domain(self, client, db_session, customer_user):
+        """A clone's reward code uses its own prefix, and the short link uses its
+        own public_domain — not 'HS-' / hongshing.ca (SCRUM-58/59)."""
+        template = RewardTemplate(name="Yum Reward", code_prefix="YUM", reward_type="fixed", reward_value=500)
+        db_session.add(template)
+        await db_session.flush()
+        db_session.add(RestaurantSettings(
+            restaurant_name="Yum Kitchen",
+            default_reward_template_id=template.id,
+            public_domain="https://yum.test",
+        ))
+        await db_session.flush()
+
+        _auth_customer(client, customer_user)
+        r = await client.post("/api/rewards/claim", json={})
+        assert r.status_code == 200
+        data = r.json()
+        assert data["reward"]["code"].startswith("YUM-")
+        assert "hongshing" not in (data.get("short_link") or "")
+        assert (data.get("short_link") or "").startswith("https://yum.test/r/")

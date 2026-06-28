@@ -64,6 +64,9 @@ async def seed_restaurant(
     compliance = profile.get("compliance", {}) or {}
     owner = profile.get("owner", {}) or {}
 
+    raw_domain = (ident.get("domain") or "").replace("https://", "").replace("http://", "").rstrip("/")
+    public_domain = f"https://{raw_domain}" if raw_domain else None
+
     logo = branding.get("logo")
     # Only store a real served URL; relative asset paths are wired by the branding
     # pipeline at provision time, so don't seed a broken image src.
@@ -107,6 +110,7 @@ async def seed_restaurant(
             timezone=locale.get("timezone", "America/Toronto"),
             privacy_contact_email=compliance.get("privacy_contact_email") or None,
             support_phone=compliance.get("support_phone") or None,
+            public_domain=public_domain,
         )
         settings_row = (await session.execute(select(RestaurantSettings))).scalars().first()
         if settings_row:
