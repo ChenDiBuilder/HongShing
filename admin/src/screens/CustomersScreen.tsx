@@ -28,7 +28,9 @@ const STATUS_COLORS: Record<string, string> = {
   cancelled: "bg-red-100 text-red-500",
 };
 
-export default function CustomersScreen() {
+interface Props { selectedCustomerId?: string | null; }
+
+export default function CustomersScreen({ selectedCustomerId }: Props) {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<CustomerDetail | null>(null);
@@ -50,6 +52,12 @@ export default function CustomersScreen() {
   }
 
   useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    if (selectedCustomerId) {
+      viewCustomer(selectedCustomerId);
+    }
+  }, [selectedCustomerId]);
 
   if (selected) {
     return (
