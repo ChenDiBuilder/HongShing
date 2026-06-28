@@ -81,10 +81,16 @@ def seed_menu(force: bool = False):
 @cli.command()
 @click.option("--profile", required=True, help="Path to a Restaurant Profile YAML")
 @click.option("--owner-password", default=None, help="Owner password (default: generate a temp one)")
-def seed_restaurant(profile: str, owner_password: str | None):
+@click.option(
+    "--logo-url",
+    default=None,
+    help="Served URL/path for a relative branding.logo asset the provisioner copied "
+    "onto the box (PRD-12 S4). Absolute branding.logo URLs are used as-is and ignore this.",
+)
+def seed_restaurant(profile: str, owner_password: str | None, logo_url: str | None):
     """Seed restaurant settings, rewards, QR campaigns, and the owner from a Profile (PRD-11)."""
     from app.cli.seed_restaurant import seed_restaurant as _seed
-    asyncio.run(_seed(profile, owner_password=owner_password))
+    asyncio.run(_seed(profile, owner_password=owner_password, logo_url=logo_url))
 
 
 @cli.command()

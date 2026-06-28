@@ -28,7 +28,12 @@ FQDN=$(terraform output -raw fqdn)
 # the var default so a redeploy never aborts here until the next infra apply.
 SLUG=$(terraform output -raw slug 2>/dev/null || echo hongshing)
 APP_DIR="/opt/$SLUG"   # box's user_data created /opt/<slug>
-echo "EC2 IP: $EC2_IP   ECR: $ECR_URL   FQDN: $FQDN   SLUG: $SLUG   APP_DIR: $APP_DIR"
+# Storefront opt-in (PRD-12 S6 / SCRUM-63). provision-restaurant.sh exports this
+# from the profile's storefront.enabled; a standalone deploy defaults to "true"
+# so the live box's behaviour is unchanged. When "false", the storefront SPA is
+# not built/shipped and no www/store dir is created, so nginx /store/ 404s.
+STOREFRONT_ENABLED="${STOREFRONT_ENABLED:-true}"
+echo "EC2 IP: $EC2_IP   ECR: $ECR_URL   FQDN: $FQDN   SLUG: $SLUG   APP_DIR: $APP_DIR   storefront: $STOREFRONT_ENABLED"
 
 # Start the (scheduled-off) box if it's stopped.
 if [ -n "$INSTANCE_ID" ]; then
@@ -50,21 +55,32 @@ docker build --platform linux/arm64 -t "${SLUG}-backend:latest" ./backend
 docker tag "${SLUG}-backend:latest" "$ECR_URL:latest"
 docker push "$ECR_URL:latest"
 
-echo "=== Build the 3 SPAs ==="
-for app in customer-web admin storefront; do
+echo "=== Build the SPAs ==="
+SPAS=(customer-web admin)
+if [ "$STOREFRONT_ENABLED" = "true" ]; then
+  SPAS+=(storefront)
+else
+  echo "  storefront disabled (storefront.enabled=false) — skipping build + ship"
+fi
+for app in "${SPAS[@]}"; do
   ( cd "$HERE/$app" && npm ci && npm run build )
 done
 
 echo "=== Ship app files ==="
+# Only create www/store when the storefront is enabled (absent dir => nginx /store/ 404s).
+STORE_DIR=""
+[ "$STOREFRONT_ENABLED" = "true" ] && STORE_DIR="$APP_DIR/www/store"
 ssh -i ~/.ssh/${SSH_KEY}.pem "ec2-user@${EC2_IP}" \
-  "mkdir -p $APP_DIR/www/customer $APP_DIR/www/admin $APP_DIR/www/store && echo '${ECR_URL}:latest' > $APP_DIR/.backend_image"
+  "mkdir -p $APP_DIR/www/customer $APP_DIR/www/admin $STORE_DIR && echo '${ECR_URL}:latest' > $APP_DIR/.backend_image"
 # Render the nginx host (__FQDN__) from the box's fqdn before shipping (template-ready).
 sed "s/__FQDN__/$FQDN/g" nginx.prod.conf > /tmp/nginx.rendered.conf
 scp -i ~/.ssh/${SSH_KEY}.pem docker-compose.prod.yml backup.sh "ec2-user@${EC2_IP}:$APP_DIR/"
 scp -i ~/.ssh/${SSH_KEY}.pem /tmp/nginx.rendered.conf "ec2-user@${EC2_IP}:$APP_DIR/nginx.prod.conf"
 rsync -az -e "ssh -i ~/.ssh/${SSH_KEY}.pem" customer-web/dist/  "ec2-user@${EC2_IP}:$APP_DIR/www/customer/"
 rsync -az -e "ssh -i ~/.ssh/${SSH_KEY}.pem" admin/dist/         "ec2-user@${EC2_IP}:$APP_DIR/www/admin/"
-rsync -az -e "ssh -i ~/.ssh/${SSH_KEY}.pem" storefront/dist/    "ec2-user@${EC2_IP}:$APP_DIR/www/store/"
+if [ "$STOREFRONT_ENABLED" = "true" ]; then
+  rsync -az -e "ssh -i ~/.ssh/${SSH_KEY}.pem" storefront/dist/  "ec2-user@${EC2_IP}:$APP_DIR/www/store/"
+fi
 
 echo "=== Bring up the stack ==="
 # The remote heredoc is single-quoted (no local expansion) — pass APP_DIR through

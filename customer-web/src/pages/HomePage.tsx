@@ -5,6 +5,7 @@ interface Props {
   logoUrl?: string;
   secondaryColor?: string;
   restaurantName?: string;
+  tagline?: string;
   campaign?: { landing_headline?: string; landing_subtitle?: string } | null;
   setPage: (p: any) => void;
   loadMenu: () => void;
@@ -17,9 +18,10 @@ function todayHours() {
   return RESTAURANT_INFO.hours[today as keyof typeof RESTAURANT_INFO.hours] || "Hours unavailable";
 }
 
-export function HomePage({ primaryColor, logoUrl, secondaryColor, restaurantName, campaign, setPage, loadMenu, onClaimReward }: Props) {
+export function HomePage({ primaryColor, logoUrl, secondaryColor, restaurantName, tagline, campaign, setPage, loadMenu, onClaimReward }: Props) {
   const headline = campaign?.landing_headline || "Order Pickup & Earn Rewards";
-  const subtitle = campaign?.landing_subtitle || "Browse our menu, order ahead, and claim exclusive rewards.";
+  // Campaign subtitle wins; otherwise the profile tagline (PRD-12 S3); otherwise neutral default.
+  const subtitle = campaign?.landing_subtitle || tagline || "Browse our menu, order ahead, and claim exclusive rewards.";
   const hasHours = Object.keys(RESTAURANT_INFO.hours).length > 0;
   // Secondary brand colour accents the secondary CTA; falls back to primary.
   const accent = secondaryColor || primaryColor;

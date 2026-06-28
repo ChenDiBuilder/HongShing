@@ -46,6 +46,17 @@ export default function SettingsScreen({ showToast }: Props) {
           <input value={settings.primary_color || ""} onChange={(e) => setSettings({ ...settings, primary_color: e.target.value })} className="w-full px-3 py-2 border rounded-lg" />
         </div>
         <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Logo</label>
+          {settings.logo_url ? (
+            <div className="flex items-center gap-3">
+              <img src={settings.logo_url} alt="Restaurant logo" className="h-12 w-auto border rounded" />
+              <span className="text-xs text-gray-500 break-all">{settings.logo_url}</span>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400">No logo configured (set via the restaurant profile at provisioning).</p>
+          )}
+        </div>
+        <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">External Ordering URL</label>
           <input value={settings.external_ordering_url || ""} onChange={(e) => setSettings({ ...settings, external_ordering_url: e.target.value })} placeholder="https://..." className="w-full px-3 py-2 border rounded-lg" />
         </div>

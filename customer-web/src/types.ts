@@ -19,6 +19,13 @@ export interface LandingConfig {
   pickup_estimate?: string;
   tax_rate?: number;
   currency_symbol?: string;
+  // Profile-driven copy + legal/locale (PRD-12 S3/S9). Optional; neutral fallbacks
+  // keep a clone free of another restaurant's wording.
+  tagline?: string;
+  reward_success_copy?: string;
+  legal_name?: string;
+  languages?: string[];
+  storefront_enabled?: boolean;
 }
 
 export interface UserReward {
@@ -111,6 +118,11 @@ export function applyRestaurantConfig(cfg: LandingConfig) {
   RESTAURANT_INFO.pickupEstimate = cfg.pickup_estimate || "";
   if (cfg.currency_symbol) currencySymbol = cfg.currency_symbol;
   if (typeof cfg.tax_rate === "number") taxRateValue = cfg.tax_rate;
+  // Locale seam (PRD-12 S9): reflect the restaurant's primary language on <html lang>
+  // so assistive tech / browsers get the right hint. Plumbing only — no translation.
+  if (cfg.languages && cfg.languages.length > 0) {
+    document.documentElement.lang = cfg.languages[0];
+  }
 }
 
 export function formatPrice(cents: number) {

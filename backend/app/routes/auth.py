@@ -31,7 +31,7 @@ async def send_otp(body: SendOTPRequest, db: AsyncSession = Depends(get_db)):
 
     from app.models import OTPCode
     from app.services.auth_service import hash_otp
-    from app.services.sms_service import send_sms
+    from app.services.sms_service import render_otp_message, send_sms
 
     now = datetime.now(timezone.utc)
 
@@ -67,7 +67,8 @@ async def send_otp(body: SendOTPRequest, db: AsyncSession = Depends(get_db)):
 
         rs = (await db.execute(select(RestaurantSettings))).scalars().first()
         brand = rs.restaurant_name if (rs and rs.restaurant_name) else (settings.sns_sender_id or "your restaurant")
-        send_sms(body.phone, f"Your {brand} verification code is {code}. It expires in 5 minutes.")
+        template = rs.otp_sms_template if rs else None
+        send_sms(body.phone, render_otp_message(template, brand, code))
     return {"ok": True, "message": "OTP sent"}
 
 

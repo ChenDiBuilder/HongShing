@@ -52,6 +52,11 @@ async def landing_config(source: str | None = None, db: AsyncSession = Depends(g
         except (ValueError, TypeError):
             hours_display = None
 
+    languages = None
+    if settings.languages:
+        langs = [s.strip() for s in settings.languages.split(",") if s.strip()]
+        languages = langs or None
+
     return LandingConfigResponse(
         restaurant_name=settings.restaurant_name,
         primary_color=settings.primary_color,
@@ -68,6 +73,11 @@ async def landing_config(source: str | None = None, db: AsyncSession = Depends(g
         pickup_estimate=settings.pickup_estimate,
         tax_rate=settings.tax_rate,
         currency_symbol=settings.currency_symbol,
+        tagline=settings.tagline,
+        reward_success_copy=settings.reward_success_copy,
+        legal_name=settings.legal_name,
+        languages=languages,
+        storefront_enabled=settings.storefront_enabled,
     )
 
 
@@ -75,7 +85,11 @@ async def landing_config(source: str | None = None, db: AsyncSession = Depends(g
 async def privacy_page(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(RestaurantSettings))
     settings = result.scalar_one_or_none()
-    name = settings.restaurant_name if settings else "This restaurant"
+    # Prefer the registered legal name in the privacy notice; fall back to the
+    # display name, then a neutral placeholder (PRD-12 S9 / SCRUM-66).
+    name = "This restaurant"
+    if settings:
+        name = settings.legal_name or settings.restaurant_name
     content = (
         f"{name} collects your phone number to provide rewards and order updates. "
         "We do not sell your data to third parties."

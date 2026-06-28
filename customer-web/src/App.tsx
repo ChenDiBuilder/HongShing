@@ -172,7 +172,8 @@ export default function App() {
   if (page === "home") {
     content = (
       <HomePage primaryColor={config.primary_color} logoUrl={config.logo_url}
-        secondaryColor={config.secondary_color} restaurantName={config.restaurant_name} campaign={config.campaign}
+        secondaryColor={config.secondary_color} restaurantName={config.restaurant_name} tagline={config.tagline}
+        campaign={config.campaign}
         setPage={setPage} loadMenu={loadMenu}
         onClaimReward={() => { returnPageRef.current = "reward"; setPage("landing"); }} />
     );
@@ -191,6 +192,7 @@ export default function App() {
   } else if (page === "reward") {
     content = (
       <RewardPage rewardCode={""} setPage={setPage} primaryColor={config.primary_color}
+        rewardSuccessCopy={config.reward_success_copy}
         loadMenu={loadMenu} loadRewards={loadRewards} profile={profile} handleLogout={handleLogout} />
     );
   } else if (page === "profile") {

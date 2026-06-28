@@ -42,3 +42,6 @@ seed_prod.py
 
 # Walkthrough demo screenshots are committed docs assets (exception to *.png above)
 !docs/walkthrough/img/*.png
+
+# Local-only Claude Code preview/launch config
+.claude/

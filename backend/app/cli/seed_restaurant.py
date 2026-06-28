@@ -44,7 +44,10 @@ def _maybe_validate(profile: dict, schema_path) -> None:
 
 
 async def seed_restaurant(
-    profile_path: str, owner_password: str | None = None, session_factory=None
+    profile_path: str,
+    owner_password: str | None = None,
+    session_factory=None,
+    logo_url: str | None = None,
 ) -> None:
     from pathlib import Path
 
@@ -58,6 +61,7 @@ async def seed_restaurant(
 
     ident = profile["identity"]
     branding = profile.get("branding", {}) or {}
+    copy = branding.get("copy", {}) or {}
     ordering = profile.get("ordering", {}) or {}
     rewards = profile.get("rewards", []) or []
     campaigns = profile.get("campaigns", []) or []
@@ -65,15 +69,26 @@ async def seed_restaurant(
     compliance = profile.get("compliance", {}) or {}
     location = profile.get("location", {}) or {}
     pricing = profile.get("pricing", {}) or {}
+    storefront = profile.get("storefront", {}) or {}
+    sms_cfg = profile.get("sms", {}) or {}
+    sms_templates = sms_cfg.get("templates", {}) or {}
     owner = profile.get("owner", {}) or {}
 
     raw_domain = (ident.get("domain") or "").replace("https://", "").replace("http://", "").rstrip("/")
     public_domain = f"https://{raw_domain}" if raw_domain else None
 
     logo = branding.get("logo")
-    # Only store a real served URL; relative asset paths are wired by the branding
-    # pipeline at provision time, so don't seed a broken image src.
-    logo_url = logo if (logo and logo.startswith("http")) else None
+    # Logo pipeline (PRD-12 S4 / SCRUM-61): an absolute branding.logo URL is served
+    # directly; a relative asset is copied onto the box at provision time, which
+    # passes its served path in via --logo-url. With neither, fall back to NULL
+    # (neutral) rather than seed a broken relative <img src>.
+    if logo and logo.startswith("http"):
+        logo_url = logo
+    elif not logo_url:
+        logo_url = None
+
+    languages = locale.get("languages") or []
+    languages_csv = ",".join(str(x) for x in languages) if languages else None
 
     hours_display = location.get("hours_display") or None
     hours_json = json.dumps(hours_display) if hours_display else None
@@ -123,6 +138,16 @@ async def seed_restaurant(
             pickup_estimate=location.get("pickup_estimate") or None,
             tax_rate=pricing.get("tax_rate"),
             currency_symbol=pricing.get("currency_symbol") or None,
+            # PRD-12 S3 copy + OTP template (SCRUM-60)
+            tagline=copy.get("tagline") or None,
+            reward_success_copy=copy.get("reward_success") or None,
+            otp_sms_template=sms_templates.get("otp") or None,
+            # PRD-12 S9 legal/locale (SCRUM-66)
+            legal_name=ident.get("legal_name") or None,
+            business_mailing_address=compliance.get("business_mailing_address") or None,
+            languages=languages_csv,
+            # PRD-12 S6 storefront opt-in (SCRUM-63)
+            storefront_enabled=bool(storefront.get("enabled", False)),
         )
         settings_row = (await session.execute(select(RestaurantSettings))).scalars().first()
         if settings_row:

@@ -67,6 +67,8 @@ ident = p.get("identity", {}) or {}
 sms   = p.get("sms", {}) or {}
 comp  = p.get("compliance", {}) or {}
 owner = p.get("owner", {}) or {}
+brand = p.get("branding", {}) or {}
+store = p.get("storefront", {}) or {}
 
 slug = (ident.get("slug") or "").strip()
 if not slug:
@@ -87,6 +89,8 @@ emit("SMS_REGION", sms.get("region", "us-east-2"))  # CA long code lives in us-e
 emit("PRIVACY_CONTACT_EMAIL", comp.get("privacy_contact_email", ""))
 emit("OWNER_EMAIL", owner.get("email", ""))
 emit("OWNER_NAME", owner.get("name", ""))
+emit("BRANDING_LOGO", brand.get("logo", ""))                                 # PRD-12 S4 logo pipeline
+emit("STOREFRONT_ENABLED", "true" if store.get("enabled", False) else "false")  # PRD-12 S6 gating
 PY
 )" || { echo "ERROR: failed to read profile $PROFILE" >&2; exit 1; }
 eval "$PROFILE_VARS"
@@ -97,6 +101,7 @@ CERT_EMAIL="${OWNER_EMAIL:-daniel.chen@bridgewayinnovations.ca}"
 echo "=== Provisioning '$SLUG' → https://$FQDN ==="
 echo "    sms: sender='$SMS_SENDER_ID' number='$SMS_ORIGINATION_NUMBER' region='$SMS_REGION'"
 echo "    owner: $OWNER_NAME <$OWNER_EMAIL>"
+echo "    branding: logo='$BRANDING_LOGO'  storefront_enabled=$STOREFRONT_ENABLED"
 
 # ── 2. Terraform: own state key, apply the box ──────────────────────────────
 echo "=== terraform init + apply (state key: $SLUG/terraform.tfstate) ==="
@@ -178,7 +183,33 @@ ENDSSH
 # ── 4. Deploy: build/push backend, build SPAs, ship, bring up the stack ──────
 echo "=== deploy.sh (build + push + ship + up; renders nginx for $FQDN) ==="
 cd "$HERE"
-AWS_PROFILE="$AWS_PROFILE" SSH_KEY="$SSH_KEY" bash "$HERE/deploy.sh" --app-only
+# STOREFRONT_ENABLED (from the profile) gates whether deploy.sh builds/ships the
+# storefront SPA (PRD-12 S6 / SCRUM-63).
+STOREFRONT_ENABLED="$STOREFRONT_ENABLED" AWS_PROFILE="$AWS_PROFILE" SSH_KEY="$SSH_KEY" \
+  bash "$HERE/deploy.sh" --app-only
+
+# ── 4b. Logo pipeline (PRD-12 S4 / SCRUM-61) ────────────────────────────────
+# An absolute branding.logo URL is seeded straight from the profile (handled in
+# the seeder). A RELATIVE path is a real asset under profiles/<path>: copy it onto
+# the box's customer web root so nginx serves it, and pass the served path to the
+# seed via --logo-url. With no logo, LOGO_SERVED stays empty (settings.logo_url NULL).
+LOGO_SERVED=""
+case "$BRANDING_LOGO" in
+  "" ) : ;;                                   # no logo declared
+  http://*|https://* ) : ;;                   # absolute URL → seeder uses the profile value
+  * )
+    LOGO_SRC="$HERE/profiles/$BRANDING_LOGO"
+    if [ ! -f "$LOGO_SRC" ]; then
+      echo "ERROR: branding.logo '$BRANDING_LOGO' is relative but $LOGO_SRC does not exist" >&2
+      exit 1
+    fi
+    LOGO_FILE="$(basename "$BRANDING_LOGO")"
+    echo "=== Copy logo asset → box ($LOGO_FILE) ==="
+    ssh "${SSH_OPTS[@]}" "ec2-user@${EC2_IP}" "mkdir -p $APP_DIR/www/customer/branding"
+    scp "${SSH_OPTS[@]}" "$LOGO_SRC" "ec2-user@${EC2_IP}:$APP_DIR/www/customer/branding/$LOGO_FILE"
+    LOGO_SERVED="/branding/$LOGO_FILE"
+    ;;
+esac
 
 # ── 5. Seed the DB from the profile ─────────────────────────────────────────
 # On a fresh box the schema is created by the FastAPI startup lifespan
@@ -191,9 +222,12 @@ PROFILE_BASE="$(basename "$PROFILE")"
 scp "${SSH_OPTS[@]}" "$PROFILE" "$HERE/profiles/restaurant.schema.json" \
   "ec2-user@${EC2_IP}:/tmp/"
 ssh "${SSH_OPTS[@]}" "ec2-user@${EC2_IP}" \
-  "SLUG='$SLUG' PROFILE_BASE='$PROFILE_BASE' bash -s" <<'ENDSSH'
+  "SLUG='$SLUG' PROFILE_BASE='$PROFILE_BASE' LOGO_SERVED='$LOGO_SERVED' bash -s" <<'ENDSSH'
 set -e
 CONTAINER="$SLUG-backend-1"
+# Relative-logo served path (PRD-12 S4) → seeder --logo-url; empty when none/absolute.
+LOGO_ARGS=""
+[ -n "$LOGO_SERVED" ] && LOGO_ARGS="--logo-url $LOGO_SERVED"
 
 # Wait for the backend container to report healthy (Dockerfile HEALTHCHECK has a
 # 30s start-period). Falls through on "running" for images without a healthcheck.
@@ -213,7 +247,7 @@ docker cp "/tmp/restaurant.schema.json"   "$CONTAINER:/tmp/restaurant.schema.jso
 # new DB, so tolerate a transient "relation does not exist".
 seeded=""
 for i in $(seq 1 10); do
-  if docker exec "$CONTAINER" python -m app.cli seed-restaurant --profile "/tmp/$PROFILE_BASE"; then
+  if docker exec "$CONTAINER" python -m app.cli seed-restaurant --profile "/tmp/$PROFILE_BASE" $LOGO_ARGS; then
     seeded=1; break
   fi
   echo "  seed attempt $i failed (schema may still be initializing); retrying in 5s..."; sleep 5

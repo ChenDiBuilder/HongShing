@@ -39,14 +39,22 @@ certbot if a cert already exists.
    (`openssl rand -hex 32`), `OTP_PEPPER` (`rand -hex 16`), `CORS_ORIGINS`, and
    the SMS + owner values from the profile (`chmod 600`); then issue the
    single-host Let's Encrypt cert (`certbot --standalone`, HTTP-01).
-4. **Deploy** (`deploy.sh`): build + push the backend image, build the 3 SPAs,
+4. **Deploy** (`deploy.sh`): build + push the backend image, build the SPAs,
    ship everything to `/opt/<slug>`, render `nginx.prod.conf` for `<fqdn>`, and
-   bring up the compose stack.
+   bring up the compose stack. The **storefront SPA is built/shipped only when
+   `storefront.enabled: true`** (PRD-12 S6) — when off, no `www/store` dir is
+   created so nginx `/store/` returns 404 (redirect-only clone).
+4b. **Logo** (PRD-12 S4): if `branding.logo` is an absolute URL it is seeded
+   straight onto `restaurant_settings.logo_url`. If it is a **relative path**, the
+   asset must exist under `profiles/<path>`; it is copied to
+   `/opt/<slug>/www/customer/branding/<file>` (served at `/branding/<file>`) and
+   that served path is passed to the seed via `--logo-url`. No logo ⇒ name-only header.
 5. **Seed** the DB from the profile: wait for the `<slug>-backend-1` container to
    report healthy (the schema is created by the app's startup lifespan, not
    Alembic, so seeding can't run until the backend has booted), copy the profile +
    schema onto the box and into the container, then run
-   `python -m app.cli seed-restaurant --profile /tmp/<slug>.yaml` (settings,
+   `python -m app.cli seed-restaurant --profile /tmp/<slug>.yaml [--logo-url …]`
+   (settings — incl. copy/OTP template/legal/locale/storefront from PRD-12 —
    rewards, QR campaigns, owner) — retried a few times to ride out first-boot
    schema creation on a brand-new database.
 6. **Print** the live URL `https://<fqdn>`.
