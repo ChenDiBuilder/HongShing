@@ -139,12 +139,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-DEMO_PREFIX = "/product-demo/hongshing"
+# Per-box default is "" (nginx serves at the host root); only a legacy path-prefixed
+# host sets DEMO_PREFIX. The middleware is a no-op when empty (PRD-12 / SCRUM-77).
+DEMO_PREFIX = settings.demo_prefix
 
 
 @app.middleware("http")
 async def strip_demo_prefix(request: Request, call_next):
-    if request.url.path.startswith(DEMO_PREFIX):
+    if DEMO_PREFIX and request.url.path.startswith(DEMO_PREFIX):
         request.scope["path"] = request.url.path[len(DEMO_PREFIX):]
         request.scope["root_path"] = DEMO_PREFIX
     return await call_next(request)

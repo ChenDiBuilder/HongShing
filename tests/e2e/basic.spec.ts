@@ -1,9 +1,10 @@
 import { test, expect } from "@playwright/test";
 
-const CF = "https://d1qkx0vmdo9wnw.cloudfront.net";
-const CUSTOMER = `${CF}/product-demo/hongshing`;
-const ADMIN = `${CF}/product-demo/hongshing-admin/`;
-const SF = `${CF}/product-demo/hongshing-storefront/`;
+// Per-box host (PRD-12 / SCRUM-77): nginx serves customer at /, admin at /admin/, store at /store/.
+const CF = "https://hongshing.demo.bridgewayinnovations.ca";
+const CUSTOMER = `${CF}`;
+const ADMIN = `${CF}/admin/`;
+const SF = `${CF}/store/`;
 const API = `${CUSTOMER}/api`;
 
 const ts = Date.now();

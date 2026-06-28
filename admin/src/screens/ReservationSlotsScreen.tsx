@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-const apiBase = import.meta.env.DEV ? "" : "/product-demo/hongshing";
+const apiBase = import.meta.env.VITE_API_BASE ?? "";
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 

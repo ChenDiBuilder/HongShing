@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import QRCode from "qrcode";
 
-const apiBase = import.meta.env.DEV ? "" : "/product-demo/hongshing";
+const apiBase = import.meta.env.VITE_API_BASE ?? "";
 
 interface QRCampaign { id: string; name: string; source_code: string; landing_headline?: string; active: boolean; }
 

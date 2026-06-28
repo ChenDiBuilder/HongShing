@@ -10,7 +10,7 @@ import { AnalyticsPanel } from "./components/AnalyticsPanel";
 
 type Page = "login" | "change-password" | "dashboard" | "qr-campaigns" | "rewards" | "customers" | "orders" | "settings" | "devices" | "reservation-slots";
 
-const apiBase = import.meta.env.DEV ? "" : "/product-demo/hongshing";
+const apiBase = import.meta.env.VITE_API_BASE ?? "";
 
 function Toast({ message, type, onDismiss }: { message: string; type: "success" | "error"; onDismiss: () => void }) {
   useEffect(() => { const t = setTimeout(onDismiss, 3000); return () => clearTimeout(t); }, [onDismiss]);
