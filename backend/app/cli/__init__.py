@@ -79,6 +79,15 @@ def seed_menu(force: bool = False):
 
 
 @cli.command()
+@click.option("--profile", required=True, help="Path to a Restaurant Profile YAML")
+@click.option("--owner-password", default=None, help="Owner password (default: generate a temp one)")
+def seed_restaurant(profile: str, owner_password: str | None):
+    """Seed restaurant settings, rewards, QR campaigns, and the owner from a Profile (PRD-11)."""
+    from app.cli.seed_restaurant import seed_restaurant as _seed
+    asyncio.run(_seed(profile, owner_password=owner_password))
+
+
+@cli.command()
 @click.option("--keep-admin/--no-keep-admin", default=True)
 @click.confirmation_option(prompt="This will delete all test data (customers, orders, reservations, devices). Continue?")
 def reset_demo(keep_admin: bool):
