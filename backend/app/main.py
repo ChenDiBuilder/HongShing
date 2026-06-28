@@ -31,6 +31,7 @@ from app.routes.admin_devices import router as admin_devices_router
 from app.routes.admin_reservation_slots import router as admin_reservation_slots_router
 from app.routes.admin_orders import router as admin_orders_router
 from app.routes.admin_analytics import router as admin_analytics_router
+from app.routes.admin_seed import router as admin_seed_router
 from app.routes.reservations import router as reservations_router
 from app.routes.cart import router as cart_router
 
@@ -79,7 +80,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="HongShing API",
+    title="Restaurant Platform API",
     version="0.2.0",
     lifespan=lifespan,
 )
@@ -137,6 +138,7 @@ app.include_router(admin_devices_router)
 app.include_router(admin_reservation_slots_router)
 app.include_router(admin_orders_router, prefix="/api/admin", tags=["admin-orders"])
 app.include_router(admin_analytics_router, prefix="/api/admin", tags=["admin-analytics"])
+app.include_router(admin_seed_router, prefix="/api/admin", tags=["admin-seed"])
 
 # Reservations (customer)
 app.include_router(reservations_router)
