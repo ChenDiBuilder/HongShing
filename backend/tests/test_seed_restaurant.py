@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.cli.seed_restaurant import seed_restaurant
 from app.models import Base, QRCampaign, RestaurantSettings, RewardTemplate, User
+from app.models.menu import Category, MenuItem
 
 PROFILE = """\
 identity: {slug: testaurant, name: "Test Bistro", legal_name: "Test Bistro Inc.", domain: testaurant.demo.bridgewayinnovations.ca}
@@ -18,7 +19,7 @@ branding:
   copy: {tagline: "Order ahead, earn perks.", reward_success: "Reward unlocked!"}
 ordering: {external_url: "https://order.example.com/test", provider: toast, allow_without_signup: true}
 rewards: [{name: "10% off your order", type: percent, value: 10}]
-campaigns: [{source: table_tent}, {source: counter}]
+campaigns: [{source: table_tent, headline: "Sit & save", subtitle: "10% off today"}, {source: counter}]
 storefront: {enabled: true}
 sms:
   origination_number: "+12494218942"
@@ -34,6 +35,17 @@ location:
 pricing: {tax_rate: 0.13, currency_symbol: "$"}
 hours: {open: "11:00", close: "22:00"}
 owner: {email: "owner@test.example", name: "Test Owner"}
+menu:
+  - name: Starters
+    slug: starters
+    image: spring-roll.jpg
+    items:
+      - {name: Spring Roll, price: 3, image: spring-roll.jpg, tags: [Vegetarian], popular: true}
+      - {name: Wonton Soup, price: 7.5, image: "https://cdn.example.com/wonton.jpg"}
+  - name: Mains
+    slug: mains
+    items:
+      - {name: General Tao Chicken, price: 18, description: "Crispy chicken", image: gt.jpg}
 """
 
 
@@ -115,6 +127,39 @@ async def test_seed_populates_all_layers(factory, tmp_path):
         assert owner.password_changed_at is None  # forces reset on first login
 
 
+async def test_seed_menu_and_campaign_copy(factory, tmp_path):
+    """Menu (categories + items) is seeded from the profile with the served-image
+    convention, and QR campaigns carry their landing copy."""
+    profile = tmp_path / "testaurant.yaml"
+    profile.write_text(PROFILE)
+    await seed_restaurant(str(profile), owner_password="pw123456", session_factory=factory)
+
+    async with factory() as s:
+        cats = {c.slug: c for c in (await s.execute(select(Category))).scalars()}
+        assert set(cats) == {"starters", "mains"}
+        assert cats["starters"].sort_order == 0 and cats["mains"].sort_order == 1
+        assert cats["starters"].image_url == "/menu/items/spring-roll.jpg"  # relative -> served path
+        assert cats["mains"].image_url is None                              # no image -> NULL
+
+        items = {i.name: i for i in (await s.execute(select(MenuItem))).scalars()}
+        assert set(items) == {"Spring Roll", "Wonton Soup", "General Tao Chicken"}
+        sr = items["Spring Roll"]
+        assert sr.price_cents == 300 and sr.popular is True and sr.sort_order == 0
+        assert sr.image_url == "/menu/items/spring-roll.jpg"
+        assert sr.tags == "Vegetarian"
+        assert items["Wonton Soup"].price_cents == 750
+        assert items["Wonton Soup"].image_url == "https://cdn.example.com/wonton.jpg"  # absolute passthrough
+        gt = items["General Tao Chicken"]
+        assert gt.price_cents == 1800 and gt.description == "Crispy chicken"
+        assert gt.category_id == cats["mains"].id
+
+        tt = (
+            await s.execute(select(QRCampaign).where(QRCampaign.source_code == "table_tent"))
+        ).scalar_one()
+        assert tt.landing_headline == "Sit & save"
+        assert tt.landing_subtitle == "10% off today"
+
+
 async def test_seed_logo_pipeline(factory, tmp_path):
     """PRD-12 S4 (SCRUM-61): absolute branding.logo is served verbatim; a relative
     asset uses the provisioner-supplied --logo-url served path; relative with no
@@ -170,3 +215,6 @@ async def test_seed_is_idempotent(factory, tmp_path):
 
     # Re-running must not duplicate any rows.
     assert await _counts(factory) == {"settings": 1, "rewards": 1, "campaigns": 2, "owners": 1}
+    async with factory() as s:
+        assert await s.scalar(select(func.count(Category.id))) == 2
+        assert await s.scalar(select(func.count(MenuItem.id))) == 3

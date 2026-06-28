@@ -254,6 +254,18 @@ case "$BRANDING_LOGO" in
     ;;
 esac
 
+# ── 4c. Menu image assets (PRD-11 native storefront) ────────────────────────
+# Per-item photos referenced by the profile's `menu:` block live under
+# profiles/assets/<slug>/menu/ and are served at /menu/items/<file> — the path the
+# seeder writes into menu_items.image_url. Copy them onto the box's customer web
+# root. Absolute http(s) image URLs in the profile need no local asset.
+MENU_ASSETS_DIR="$HERE/profiles/assets/$SLUG/menu"
+if [ -d "$MENU_ASSETS_DIR" ] && [ -n "$(ls -A "$MENU_ASSETS_DIR" 2>/dev/null)" ]; then
+  echo "=== Copy menu image assets → box ($(ls "$MENU_ASSETS_DIR" | wc -l | tr -d ' ') files) ==="
+  ssh "${SSH_OPTS[@]}" "ec2-user@${EC2_IP}" "mkdir -p $APP_DIR/www/customer/menu/items"
+  scp "${SSH_OPTS[@]}" "$MENU_ASSETS_DIR"/* "ec2-user@${EC2_IP}:$APP_DIR/www/customer/menu/items/"
+fi
+
 # ── 5. Seed the DB from the profile ─────────────────────────────────────────
 # On a fresh box the schema is created by the FastAPI startup lifespan
 # (Base.metadata.create_all), NOT Alembic — so it lands only after the backend

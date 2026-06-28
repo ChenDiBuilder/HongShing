@@ -32,13 +32,15 @@ rewards:
     value: 10
     terms:
 
-campaigns:
+campaigns:                         # QR acquisition sources; headline/subtitle optional (QR landing copy)
   - source: table_tent
+    headline:                      # e.g. "Grab a seat, grab a reward"
+    subtitle:                      # e.g. "Join now and get 10% off your next order."
   - source: counter
   - source: receipt
 
 storefront:
-  enabled: false                   # native ordering — opt-in
+  enabled: false                   # native ordering — opt-in; requires a `menu:` block (see bottom)
 
 sms:
   sender_id:                       # <= 11 chars where sender IDs are supported
@@ -81,3 +83,20 @@ hours:
 owner:
   email:
   name:
+
+# menu: native-storefront menu — required when storefront.enabled is true. One
+# block per category; each item needs name + price (in dollars). image is optional:
+# a filename under profiles/assets/<slug>/menu/ (copied to the box and served at
+# /menu/items/<file>) or an absolute URL. description, tags (list), and popular
+# (bool) are optional. Omit the whole section for redirect-only (external ordering) demos.
+# menu:
+#   - name: Starters
+#     slug: starters
+#     image: spring-roll.jpg
+#     items:
+#       - name: Spring Roll
+#         price: 3
+#         image: spring-roll.jpg
+#         description: "Crispy vegetable spring roll"
+#         tags: [Vegetarian]
+#         popular: true

@@ -19,13 +19,28 @@ from sqlalchemy import select
 from app.cli.profile_validator import casl_warnings, validate_profile
 from app.database import async_session
 from app.models import QRCampaign, RestaurantSettings, RewardTemplate, User
+from app.models.menu import Category, MenuItem
 from app.services.auth_service import hash_password
+
+MENU_IMAGE_BASE = "/menu/items"
 
 
 def _code_prefix(name: str, slug: str) -> str:
     """Short reward-code prefix from the restaurant name initials, else the slug."""
     initials = "".join(w[0] for w in name.split() if w)
     return (initials or slug)[:10].upper()
+
+
+def _menu_image(val) -> str | None:
+    """Resolve a profile menu image to a served URL. Absolute http(s) URLs pass
+    through unchanged; a bare filename is served from MENU_IMAGE_BASE (the
+    provisioner copies the asset there). Empty -> None (SPA shows a placeholder)."""
+    if not val:
+        return None
+    val = str(val).strip()
+    if val.startswith("http://") or val.startswith("https://"):
+        return val
+    return f"{MENU_IMAGE_BASE}/{val.lstrip('/')}"
 
 
 
@@ -154,20 +169,28 @@ async def seed_restaurant(
             session.add(RestaurantSettings(**fields))
             click.echo("  settings created")
 
-        # 3) QR campaigns (idempotent by source_code).
+        # 3) QR campaigns (idempotent by source_code; landing copy is upserted).
         for c in campaigns:
             src = c["source"]
+            headline = c.get("headline") or None
+            subtitle = c.get("subtitle") or None
             existing = (
                 await session.execute(select(QRCampaign).where(QRCampaign.source_code == src))
             ).scalar_one_or_none()
             if existing:
-                click.echo(f"  campaign exists: {src}")
+                existing.landing_headline = headline
+                existing.landing_subtitle = subtitle
+                if default_reward_id and not existing.reward_template_id:
+                    existing.reward_template_id = default_reward_id
+                click.echo(f"  campaign updated: {src}")
                 continue
             session.add(
                 QRCampaign(
                     name=src.replace("_", " ").title(),
                     source_code=src,
                     reward_template_id=default_reward_id,
+                    landing_headline=headline,
+                    landing_subtitle=subtitle,
                     active=True,
                 )
             )
@@ -193,6 +216,69 @@ async def seed_restaurant(
                     )
                 )
                 click.echo(f"  owner created: {email}")
+
+        # 5) Menu — categories + items (native storefront, PRD-11). Profile-driven and
+        # idempotent: upsert categories by slug and items by (category, name) so a
+        # re-run reflects profile edits without destructive deletes (safe on a live box
+        # with existing carts/orders). Relative image filenames are served from
+        # MENU_IMAGE_BASE (copied to the box at provision time); absolute URLs pass through.
+        menu = profile.get("menu", []) or []
+        for ci, cat in enumerate(menu):
+            slug = str(cat.get("slug") or cat.get("name") or "").strip().lower()
+            cat_img = _menu_image(cat.get("image"))
+            existing_cat = (
+                await session.execute(select(Category).where(Category.slug == slug))
+            ).scalar_one_or_none()
+            if existing_cat:
+                existing_cat.name = cat["name"]
+                existing_cat.image_url = cat_img
+                existing_cat.sort_order = ci
+                cat_id = existing_cat.id
+            else:
+                new_cat = Category(name=cat["name"], slug=slug, image_url=cat_img, sort_order=ci)
+                session.add(new_cat)
+                await session.flush()
+                cat_id = new_cat.id
+            for ii, it in enumerate(cat.get("items", []) or []):
+                price_cents = int(round(float(it["price"]) * 100))
+                tags = it.get("tags")
+                tags_csv = (
+                    ",".join(str(t) for t in tags)
+                    if isinstance(tags, list) and tags
+                    else (tags or None)
+                )
+                existing_item = (
+                    await session.execute(
+                        select(MenuItem).where(
+                            MenuItem.category_id == cat_id, MenuItem.name == it["name"]
+                        )
+                    )
+                ).scalar_one_or_none()
+                if existing_item:
+                    existing_item.description = it.get("description") or None
+                    existing_item.price_cents = price_cents
+                    existing_item.image_url = _menu_image(it.get("image"))
+                    existing_item.tags = tags_csv
+                    existing_item.popular = bool(it.get("popular", False))
+                    existing_item.sort_order = ii
+                    existing_item.is_available = True
+                else:
+                    session.add(
+                        MenuItem(
+                            category_id=cat_id,
+                            name=it["name"],
+                            description=it.get("description") or None,
+                            price_cents=price_cents,
+                            image_url=_menu_image(it.get("image")),
+                            tags=tags_csv,
+                            popular=bool(it.get("popular", False)),
+                            sort_order=ii,
+                            is_available=True,
+                        )
+                    )
+        if menu:
+            total = sum(len(c.get("items", []) or []) for c in menu)
+            click.echo(f"  menu: {len(menu)} categories, {total} items")
 
         await session.commit()
 
