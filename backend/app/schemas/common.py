@@ -76,6 +76,8 @@ class LandingConfigResponse(BaseModel):
     campaign: "CampaignConfig | None" = None
     allow_order_without_signup: bool = True
     external_ordering_url: str | None = None
+    support_phone: str | None = None
+    privacy_contact_email: str | None = None
 
 
 class CampaignConfig(BaseModel):

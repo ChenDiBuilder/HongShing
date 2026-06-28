@@ -30,6 +30,8 @@ export interface LandingConfigResponse {
   };
   allow_order_without_signup: boolean;
   external_ordering_url?: string;
+  support_phone?: string;
+  privacy_contact_email?: string;
 }
 
 export interface UserResponse {

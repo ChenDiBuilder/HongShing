@@ -16,7 +16,7 @@ class RestaurantSettings(Base):
         primary_key=True,
         default=lambda: "00000000-0000-0000-0000-000000000001",
     )
-    restaurant_name: Mapped[str] = mapped_column(String(200), default="HongShing")
+    restaurant_name: Mapped[str] = mapped_column(String(200), default="Restaurant")
     logo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     primary_color: Mapped[str] = mapped_column(String(7), default="#C41E3A")
     secondary_color: Mapped[str | None] = mapped_column(String(7), nullable=True)

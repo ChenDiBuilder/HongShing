@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { api } from "../context/api";
+import { getLandingConfig, type LandingConfigResponse } from "../lib/api";
 
 export function ReservationPage({ primaryColor: _primaryColor, setPage: _setPage, profile }: any) {
   const [date, setDate] = useState("");
@@ -87,7 +88,23 @@ export function ReservationPage({ primaryColor: _primaryColor, setPage: _setPage
   );
 }
 
+function useLandingConfig() {
+  const [config, setConfig] = useState<LandingConfigResponse | null>(null);
+  useEffect(() => {
+    const source = new URLSearchParams(window.location.search).get("source") || undefined;
+    getLandingConfig(source).then(setConfig).catch(() => {});
+  }, []);
+  return config;
+}
+
+function contactSentence(config: LandingConfigResponse | null) {
+  const parts = [config?.support_phone, config?.privacy_contact_email].filter(Boolean);
+  if (parts.length === 0) return "us";
+  return parts.join(" or ");
+}
+
 export function TermsPage() {
+  const config = useLandingConfig();
   return (
     <div className="bg-white rounded-2xl shadow p-8 prose prose-sm max-w-none">
       <h1 className="text-2xl font-bold mb-6">Terms and Conditions</h1>
@@ -97,18 +114,19 @@ export function TermsPage() {
       <h3 className="font-bold mt-6 mb-2">Pickup</h3>
       <p className="mb-4">Orders must be picked up at the designated time. We reserve the right to cancel orders not picked up within 30 minutes of the scheduled time.</p>
       <h3 className="font-bold mt-6 mb-2">Contact</h3>
-      <p>For any questions, contact us at (416) 977-3338 or info@hongshing.com.</p>
+      <p>For any questions, contact {contactSentence(config)}.</p>
     </div>
   );
 }
 
 export function PrivacyPage() {
+  const config = useLandingConfig();
   return (
     <div className="bg-white rounded-2xl shadow p-8 prose prose-sm max-w-none">
       <h1 className="text-2xl font-bold mb-6">Privacy Policy</h1>
-      <p className="mb-4">Hong Shing Restaurant takes your privacy seriously. We collect your phone number to provide rewards and order confirmations.</p>
+      <p className="mb-4">{config?.restaurant_name || "This restaurant"} takes your privacy seriously. We collect your phone number to provide rewards and order confirmations.</p>
       <p className="mb-4">Your data is not shared with third parties. You can request deletion of your data at any time by contacting us.</p>
-      <p>For questions about this policy, contact us at info@hongshing.com.</p>
+      <p>For questions about this policy, contact {contactSentence(config)}.</p>
     </div>
   );
 }

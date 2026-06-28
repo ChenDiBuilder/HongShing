@@ -17,7 +17,7 @@ async def landing_config(source: str | None = None, db: AsyncSession = Depends(g
     if not settings:
         # Return defaults if no settings row exists
         return LandingConfigResponse(
-            restaurant_name="HongShing",
+            restaurant_name="Restaurant",
             primary_color="#C41E3A",
             allow_order_without_signup=True,
         )
@@ -49,12 +49,21 @@ async def landing_config(source: str | None = None, db: AsyncSession = Depends(g
         campaign=campaign,
         allow_order_without_signup=settings.allow_order_without_signup,
         external_ordering_url=settings.external_ordering_url,
+        support_phone=settings.support_phone,
+        privacy_contact_email=settings.privacy_contact_email,
     )
 
 
 @router.get("/privacy")
-async def privacy_page():
-    return {
-        "title": "Privacy Policy",
-        "content": "HongShing collects your phone number to provide rewards and order updates. We do not sell your data to third parties.",
-    }
+async def privacy_page(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(RestaurantSettings))
+    settings = result.scalar_one_or_none()
+    name = settings.restaurant_name if settings else "This restaurant"
+    content = (
+        f"{name} collects your phone number to provide rewards and order updates. "
+        "We do not sell your data to third parties."
+    )
+    contact = settings.privacy_contact_email if settings else None
+    if contact:
+        content += f" For questions, contact {contact}."
+    return {"title": "Privacy Policy", "content": content}
