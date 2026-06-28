@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { formatPrice, RESTAURANT_INFO } from "../types";
+import { formatPrice, taxRate, RESTAURANT_INFO } from "../types";
 import { useCart } from "../context/CartContext";
 import { api } from "../context/api";
 
@@ -48,9 +48,10 @@ export function CartPage({ primaryColor, profile, setPage }: Props) {
   const [guestName, setGuestName] = useState("");
   const [guestPhone, setGuestPhone] = useState("");
 
+  const tr = taxRate();
   const subtotal = formatPrice(cart.subtotalCents);
-  const tax = formatPrice(Math.round(cart.subtotalCents * 0.13));
-  const total = formatPrice(Math.round(cart.subtotalCents * 1.13));
+  const tax = formatPrice(Math.round(cart.subtotalCents * tr));
+  const total = formatPrice(Math.round(cart.subtotalCents * (1 + tr)));
 
   if (cart.items.length === 0) {
     return (
@@ -70,7 +71,7 @@ export function CartPage({ primaryColor, profile, setPage }: Props) {
       <button onClick={() => setPage("menu")} className="text-sm text-gray-500 mb-4 hover:underline">← Continue Shopping</button>
       <h1 className="text-2xl font-bold text-gray-800 mb-1">Your Order</h1>
       <div className="flex items-center justify-between mb-5">
-        <p className="text-sm text-gray-500">Pickup at {RESTAURANT_INFO.address.split(",")[0]}</p>
+        <p className="text-sm text-gray-500">{RESTAURANT_INFO.address ? `Pickup at ${RESTAURANT_INFO.address.split(",")[0]}` : "Pickup order"}</p>
         <button onClick={() => cart.clearCart()} className="text-sm text-red-500 hover:underline">Clear All</button>
       </div>
 
@@ -117,9 +118,9 @@ export function CartPage({ primaryColor, profile, setPage }: Props) {
       <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6">
         <div className="flex items-center justify-between text-sm">
           <span className="text-amber-800 font-medium">Pickup at the restaurant</span>
-          <span className="text-amber-700">Ready in {RESTAURANT_INFO.pickupEstimate}</span>
+          {RESTAURANT_INFO.pickupEstimate && <span className="text-amber-700">Ready in {RESTAURANT_INFO.pickupEstimate}</span>}
         </div>
-        <p className="text-xs text-amber-600 mt-1">Pay at pickup · {RESTAURANT_INFO.address}</p>
+        <p className="text-xs text-amber-600 mt-1">Pay at pickup{RESTAURANT_INFO.address ? ` · ${RESTAURANT_INFO.address}` : ""}</p>
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 px-3 pb-4 bg-white/80 backdrop-blur">

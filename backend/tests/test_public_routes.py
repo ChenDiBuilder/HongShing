@@ -36,6 +36,51 @@ class TestLandingConfig:
         assert data["primary_color"] == "#0000FF"
         assert data["allow_order_without_signup"] is False
 
+    async def test_surfaces_display_fields(self, client, db_session):
+        """PRD-12 S8 — address/phone/hours/pickup/tax/currency reach the SPA, and
+        hours_json is parsed into a dict (or stays None on bad JSON)."""
+        import json
+
+        from app.models import RestaurantSettings
+
+        settings = RestaurantSettings(
+            id="00000000-0000-0000-0000-000000000001",
+            restaurant_name="Test Restaurant",
+            primary_color="#0000FF",
+            address="1 Test St",
+            contact_phone="+14165550123",
+            hours_json=json.dumps({"Mon": "9–5", "Tue": "Closed"}),
+            pickup_estimate="15 min",
+            tax_rate=0.05,
+            currency_symbol="$",
+        )
+        db_session.add(settings)
+        await db_session.flush()
+
+        data = (await client.get("/api/public/landing-config")).json()
+        assert data["address"] == "1 Test St"
+        assert data["contact_phone"] == "+14165550123"
+        assert data["hours_display"] == {"Mon": "9–5", "Tue": "Closed"}
+        assert data["pickup_estimate"] == "15 min"
+        assert data["tax_rate"] == 0.05
+        assert data["currency_symbol"] == "$"
+
+    async def test_bad_hours_json_does_not_500(self, client, db_session):
+        from app.models import RestaurantSettings
+
+        settings = RestaurantSettings(
+            id="00000000-0000-0000-0000-000000000001",
+            restaurant_name="Test Restaurant",
+            primary_color="#0000FF",
+            hours_json="not valid json{",
+        )
+        db_session.add(settings)
+        await db_session.flush()
+
+        resp = await client.get("/api/public/landing-config")
+        assert resp.status_code == 200
+        assert resp.json()["hours_display"] is None
+
     async def test_source_filters_campaign(self, client, db_session):
         from app.models import QRCampaign, RestaurantSettings
 

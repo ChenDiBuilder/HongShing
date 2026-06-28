@@ -109,6 +109,30 @@
         "business_mailing_address": { "type": "string" }
       }
     },
+    "location": {
+      "type": "object",
+      "description": "Customer-facing storefront display (PRD-12 S8). Optional; unset fields fall back to neutral defaults in the SPA so a clone never shows another restaurant's address.",
+      "additionalProperties": false,
+      "properties": {
+        "address": { "type": "string", "description": "Pickup/display address, shown on home/cart/order pages" },
+        "phone": { "type": "string", "description": "Main restaurant line for the home-page tel: link (distinct from compliance.support_phone)" },
+        "pickup_estimate": { "type": "string", "description": "e.g. \"20–30 minutes\"" },
+        "hours_display": {
+          "type": "object",
+          "description": "Per-day display hours, e.g. {\"Mon\": \"11:30 AM – 9:00 PM\", \"Tue\": \"Closed\"}. Distinct from hours.open/close which drives the EC2 schedule.",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+    "pricing": {
+      "type": "object",
+      "description": "Customer-facing pricing display (PRD-12 S8).",
+      "additionalProperties": false,
+      "properties": {
+        "tax_rate": { "type": "number", "description": "Sales-tax multiplier applied at cart, e.g. 0.13 for Ontario HST. Defaults to 0.13 in the SPA when unset." },
+        "currency_symbol": { "type": "string", "description": "Currency symbol for price formatting, e.g. \"$\". Defaults to \"$\" when unset." }
+      }
+    },
     "hours": {
       "type": "object",
       "required": ["open", "close"],

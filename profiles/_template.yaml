@@ -54,6 +54,23 @@ compliance:
   support_phone:                   # customer-facing support/contact phone
   business_mailing_address:        # required to send marketing SMS (CASL)
 
+location:                          # customer-facing storefront display (optional; SPA falls back to neutral defaults)
+  address:                         # pickup/display address, shown on home/cart/order pages
+  phone:                           # main restaurant line for the home-page tel: link
+  pickup_estimate:                 # e.g. "20–30 minutes"
+  hours_display:                   # per-day display hours (distinct from hours.open/close below)
+    Mon:
+    Tue:
+    Wed:
+    Thu:
+    Fri:
+    Sat:
+    Sun:
+
+pricing:
+  tax_rate: 0.13                   # sales-tax multiplier at cart (Ontario HST shown); SPA defaults to 0.13
+  currency_symbol: "$"
+
 hours:
   open: "11:00"
   close: "22:00"

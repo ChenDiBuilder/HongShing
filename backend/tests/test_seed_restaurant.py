@@ -1,5 +1,6 @@
 """Tests for the profile-driven seeder (SCRUM-50) — requires a test database."""
 
+import json
 import os
 
 import pytest_asyncio
@@ -17,6 +18,12 @@ rewards: [{name: "10% off your order", type: percent, value: 10}]
 campaigns: [{source: table_tent}, {source: counter}]
 sms: {origination_number: "+12494218942", region: us-east-2}
 locale: {timezone: "America/Toronto"}
+location:
+  address: "1 Test St, Toronto, ON"
+  phone: "+14165550123"
+  pickup_estimate: "15–25 minutes"
+  hours_display: {Mon: "11:00 AM – 9:00 PM", Tue: "Closed"}
+pricing: {tax_rate: 0.13, currency_symbol: "$"}
 hours: {open: "11:00", close: "22:00"}
 owner: {email: "owner@test.example", name: "Test Owner"}
 """
@@ -67,6 +74,13 @@ async def test_seed_populates_all_layers(factory, tmp_path):
         assert settings.external_ordering_provider == "toast"
         assert settings.logo_url is None  # relative asset path -> not seeded as a URL
         assert settings.default_reward_template_id is not None
+        # PRD-12 S8 — customer-facing display fields from location/pricing
+        assert settings.address == "1 Test St, Toronto, ON"
+        assert settings.contact_phone == "+14165550123"
+        assert settings.pickup_estimate == "15–25 minutes"
+        assert json.loads(settings.hours_json) == {"Mon": "11:00 AM – 9:00 PM", "Tue": "Closed"}
+        assert settings.tax_rate == 0.13
+        assert settings.currency_symbol == "$"
 
         reward = (await s.execute(select(RewardTemplate))).scalar_one()
         assert reward.name == "10% off your order"

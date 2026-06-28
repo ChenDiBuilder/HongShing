@@ -11,6 +11,14 @@ export interface LandingConfig {
   campaign?: { id: string; source_code: string; landing_headline?: string; landing_subtitle?: string };
   allow_order_without_signup: boolean;
   external_ordering_url?: string;
+  // Customer-facing storefront/location display (PRD-12 S8). Optional; the app
+  // falls back to neutral defaults so a clone never shows another restaurant's info.
+  address?: string;
+  contact_phone?: string;
+  hours_display?: Record<string, string>;
+  pickup_estimate?: string;
+  tax_rate?: number;
+  currency_symbol?: string;
 }
 
 export interface UserReward {
@@ -70,23 +78,42 @@ export function categoryEmoji(slug: string) {
   return CATEGORY_EMOJI[slug] || "🍽️";
 }
 
-export function formatPrice(cents: number) {
-  if (cents == null || isNaN(cents)) return "$0.00";
-  return `$${(cents / 100).toFixed(2)}`;
+// Runtime restaurant info, hydrated from /api/public/landing-config at startup
+// (see applyRestaurantConfig). Defaults are neutral/empty so nothing
+// HongShing-specific is hardcoded — a clone shows only its own configured values.
+export const RESTAURANT_INFO: {
+  address: string;
+  phone: string;
+  hours: Record<string, string>;
+  pickupEstimate: string;
+} = {
+  address: "",
+  phone: "",
+  hours: {},
+  pickupEstimate: "",
+};
+
+// Currency + tax are configurable per restaurant; defaults match a Canadian
+// dollar / Ontario HST clone and are overridden by the profile when set.
+let currencySymbol = "$";
+let taxRateValue = 0.13;
+
+export function taxRate() {
+  return taxRateValue;
 }
 
-export const RESTAURANT_INFO = {
-  cuisine: "Cantonese & Chinese",
-  address: "195 Dundas St W, Toronto, ON M5G 1C7",
-  phone: "+14169773338",
-  hours: {
-    "Mon": "11:30 AM – 9:00 PM",
-    "Tue": "Closed",
-    "Wed": "11:30 AM – 9:00 PM",
-    "Thu": "11:30 AM – 9:00 PM",
-    "Fri": "11:30 AM – 10:00 PM",
-    "Sat": "11:30 AM – 10:00 PM",
-    "Sun": "11:30 AM – 9:00 PM",
-  },
-  pickupEstimate: "20–30 minutes",
-};
+// Apply the restaurant's landing-config to the module-level display state. Call
+// once after fetching landing-config, before the first render that reads it.
+export function applyRestaurantConfig(cfg: LandingConfig) {
+  RESTAURANT_INFO.address = cfg.address || "";
+  RESTAURANT_INFO.phone = cfg.contact_phone || "";
+  RESTAURANT_INFO.hours = cfg.hours_display || {};
+  RESTAURANT_INFO.pickupEstimate = cfg.pickup_estimate || "";
+  if (cfg.currency_symbol) currencySymbol = cfg.currency_symbol;
+  if (typeof cfg.tax_rate === "number") taxRateValue = cfg.tax_rate;
+}
+
+export function formatPrice(cents: number) {
+  if (cents == null || isNaN(cents)) return `${currencySymbol}0.00`;
+  return `${currencySymbol}${(cents / 100).toFixed(2)}`;
+}

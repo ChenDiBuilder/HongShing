@@ -79,6 +79,14 @@ class LandingConfigResponse(BaseModel):
     external_ordering_url: str | None = None
     support_phone: str | None = None
     privacy_contact_email: str | None = None
+    # Customer-facing storefront/location display (PRD-12 S8). Null when the
+    # restaurant hasn't configured them; the SPA falls back to neutral defaults.
+    address: str | None = None
+    contact_phone: str | None = None
+    hours_display: dict[str, str] | None = None
+    pickup_estimate: str | None = None
+    tax_rate: float | None = None
+    currency_symbol: str | None = None
 
 
 class CampaignConfig(BaseModel):

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { api } from "../context/api";
+import { formatPrice } from "../types";
 
 interface LandingPageProps {
   primaryColor: string;
@@ -132,7 +133,7 @@ export function RewardPage({ rewardCode, setPage, primaryColor, loadMenu, loadRe
                 </span>
               </div>
               {reward.reward_value && (
-                <p className="text-sm text-gray-600">Save ${(reward.reward_value / 100).toFixed(2)} on your next order</p>
+                <p className="text-sm text-gray-600">Save {formatPrice(reward.reward_value)} on your next order</p>
               )}
               <p className="text-xs text-gray-400 mt-2">Show this code to staff when ordering</p>
             </div>

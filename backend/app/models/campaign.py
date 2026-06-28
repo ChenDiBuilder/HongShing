@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -32,6 +32,15 @@ class RestaurantSettings(Base):
     # Customer-facing base URL (e.g. https://yum.example.com) used to build reward
     # short links — de-hardcodes the old hongshing.ca host. Seeded from identity.domain.
     public_domain: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # Customer-facing storefront/location display (PRD-12 S8, de-brand sweep). All
+    # nullable; the SPA falls back to neutral defaults so a clone never shows
+    # HongShing's address/phone/hours. Seeded from a profile's `location`/`pricing`.
+    address: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    contact_phone: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    hours_json: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON: {day: "hours"}
+    pickup_estimate: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    tax_rate: Mapped[float | None] = mapped_column(Float, nullable=True)  # e.g. 0.13 (HST)
+    currency_symbol: Mapped[str | None] = mapped_column(String(4), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

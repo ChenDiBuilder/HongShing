@@ -1,3 +1,5 @@
+import json
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
 
@@ -41,6 +43,15 @@ async def landing_config(source: str | None = None, db: AsyncSession = Depends(g
                 reward_template_id=campaign_row.reward_template_id,
             )
 
+    hours_display = None
+    if settings.hours_json:
+        try:
+            parsed = json.loads(settings.hours_json)
+            if isinstance(parsed, dict):
+                hours_display = {str(k): str(v) for k, v in parsed.items()}
+        except (ValueError, TypeError):
+            hours_display = None
+
     return LandingConfigResponse(
         restaurant_name=settings.restaurant_name,
         primary_color=settings.primary_color,
@@ -51,6 +62,12 @@ async def landing_config(source: str | None = None, db: AsyncSession = Depends(g
         external_ordering_url=settings.external_ordering_url,
         support_phone=settings.support_phone,
         privacy_contact_email=settings.privacy_contact_email,
+        address=settings.address,
+        contact_phone=settings.contact_phone,
+        hours_display=hours_display,
+        pickup_estimate=settings.pickup_estimate,
+        tax_rate=settings.tax_rate,
+        currency_symbol=settings.currency_symbol,
     )
 
 

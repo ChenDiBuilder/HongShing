@@ -9,6 +9,7 @@ The profile path is resolved at runtime, so this runs in the container via:
     docker exec <backend> python -m app.cli seed-restaurant --profile /tmp/<slug>.yaml
 """
 
+import json
 import secrets
 
 import click
@@ -62,6 +63,8 @@ async def seed_restaurant(
     campaigns = profile.get("campaigns", []) or []
     locale = profile.get("locale", {}) or {}
     compliance = profile.get("compliance", {}) or {}
+    location = profile.get("location", {}) or {}
+    pricing = profile.get("pricing", {}) or {}
     owner = profile.get("owner", {}) or {}
 
     raw_domain = (ident.get("domain") or "").replace("https://", "").replace("http://", "").rstrip("/")
@@ -71,6 +74,9 @@ async def seed_restaurant(
     # Only store a real served URL; relative asset paths are wired by the branding
     # pipeline at provision time, so don't seed a broken image src.
     logo_url = logo if (logo and logo.startswith("http")) else None
+
+    hours_display = location.get("hours_display") or None
+    hours_json = json.dumps(hours_display) if hours_display else None
 
     temp_pw = None
     async with factory() as session:
@@ -111,6 +117,12 @@ async def seed_restaurant(
             privacy_contact_email=compliance.get("privacy_contact_email") or None,
             support_phone=compliance.get("support_phone") or None,
             public_domain=public_domain,
+            address=location.get("address") or None,
+            contact_phone=location.get("phone") or None,
+            hours_json=hours_json,
+            pickup_estimate=location.get("pickup_estimate") or None,
+            tax_rate=pricing.get("tax_rate"),
+            currency_symbol=pricing.get("currency_symbol") or None,
         )
         settings_row = (await session.execute(select(RestaurantSettings))).scalars().first()
         if settings_row:
