@@ -70,6 +70,26 @@ owner = p.get("owner", {}) or {}
 brand = p.get("branding", {}) or {}
 store = p.get("storefront", {}) or {}
 
+import re
+# Pre-flight gate (PRD-12 S11 / SCRUM-79): reject an obviously-malformed profile
+# BEFORE any cloud resource is created. The authoritative, fuller validation runs
+# in-container at seed time (app.cli.profile_validator).
+_errs = []
+if not (ident.get("name") or "").strip():
+    _errs.append("identity.name is required")
+if not (ident.get("domain") or "").strip():
+    _errs.append("identity.domain is required")
+_email = (owner.get("email") or "").strip()
+if not _email or "@" not in _email:
+    _errs.append("owner.email is required (valid email)")
+_pc = brand.get("primary_color")
+if _pc and not re.match(r"^#[0-9a-fA-F]{6}$", str(_pc)):
+    _errs.append("branding.primary_color must be a #RRGGBB hex colour")
+if _errs:
+    for _e in _errs:
+        sys.stderr.write(f"ERROR: {_e}\n")
+    sys.exit(6)
+
 slug = (ident.get("slug") or "").strip()
 if not slug:
     sys.stderr.write("ERROR: identity.slug is required\n")

@@ -16,6 +16,7 @@ import click
 import yaml
 from sqlalchemy import select
 
+from app.cli.profile_validator import casl_warnings, validate_profile
 from app.database import async_session
 from app.models import QRCampaign, RestaurantSettings, RewardTemplate, User
 from app.services.auth_service import hash_password
@@ -27,20 +28,6 @@ def _code_prefix(name: str, slug: str) -> str:
     return (initials or slug)[:10].upper()
 
 
-def _maybe_validate(profile: dict, schema_path) -> None:
-    """Best-effort schema validation — skipped if jsonschema/schema isn't available."""
-    try:
-        import json
-
-        import jsonschema
-    except ImportError:
-        return
-    try:
-        with open(schema_path) as f:
-            schema = json.load(f)
-    except OSError:
-        return
-    jsonschema.validate(profile, schema)
 
 
 async def seed_restaurant(
@@ -57,7 +44,15 @@ async def seed_restaurant(
     with open(path) as f:
         profile = yaml.safe_load(f)
 
-    _maybe_validate(profile, path.parent / "restaurant.schema.json")
+    # Fail fast on a malformed profile BEFORE touching the DB (PRD-12 S11 / SCRUM-79),
+    # so a bad profile never leaves a half-seeded box.
+    errors = validate_profile(profile)
+    if errors:
+        raise click.ClickException(
+            "Profile validation failed:\n  - " + "\n  - ".join(errors)
+        )
+    for w in casl_warnings(profile):
+        click.echo(f"  WARNING: {w}")
 
     ident = profile["identity"]
     branding = profile.get("branding", {}) or {}

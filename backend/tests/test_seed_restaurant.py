@@ -142,6 +142,24 @@ async def test_seed_logo_pipeline(factory, tmp_path):
         assert (await s.execute(select(RestaurantSettings))).scalar_one().logo_url == "https://cdn.example.com/x/logo.png"
 
 
+async def test_seed_rejects_malformed_profile(factory, tmp_path):
+    """PRD-12 S11 (SCRUM-79): a malformed profile fails fast and writes nothing."""
+    import click
+    import pytest
+
+    bad = tmp_path / "bad.yaml"
+    bad.write_text(
+        'identity: {slug: "Bad Slug!", name: "", domain: ""}\n'
+        'branding: {primary_color: "#xyz"}\n'
+        "owner: {email: notanemail}\n"
+    )
+    with pytest.raises(click.ClickException):
+        await seed_restaurant(str(bad), owner_password="pw123456", session_factory=factory)
+
+    # Nothing was persisted — the gate runs before the DB session opens.
+    assert await _counts(factory) == {"settings": 0, "rewards": 0, "campaigns": 0, "owners": 0}
+
+
 async def test_seed_is_idempotent(factory, tmp_path):
     profile = tmp_path / "testaurant.yaml"
     profile.write_text(PROFILE)

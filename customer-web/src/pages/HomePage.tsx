@@ -6,6 +6,8 @@ interface Props {
   secondaryColor?: string;
   restaurantName?: string;
   tagline?: string;
+  externalOrderingUrl?: string;
+  onExternalOrder?: () => void;
   campaign?: { landing_headline?: string; landing_subtitle?: string } | null;
   setPage: (p: any) => void;
   loadMenu: () => void;
@@ -18,7 +20,7 @@ function todayHours() {
   return RESTAURANT_INFO.hours[today as keyof typeof RESTAURANT_INFO.hours] || "Hours unavailable";
 }
 
-export function HomePage({ primaryColor, logoUrl, secondaryColor, restaurantName, tagline, campaign, setPage, loadMenu, onClaimReward }: Props) {
+export function HomePage({ primaryColor, logoUrl, secondaryColor, restaurantName, tagline, externalOrderingUrl, onExternalOrder, campaign, setPage, loadMenu, onClaimReward }: Props) {
   const headline = campaign?.landing_headline || "Order Pickup & Earn Rewards";
   // Campaign subtitle wins; otherwise the profile tagline (PRD-12 S3); otherwise neutral default.
   const subtitle = campaign?.landing_subtitle || tagline || "Browse our menu, order ahead, and claim exclusive rewards.";
@@ -43,9 +45,17 @@ export function HomePage({ primaryColor, logoUrl, secondaryColor, restaurantName
         </p>
 
         <div className="w-full max-w-sm space-y-3">
+          {/* External ordering CTA — only when the restaurant configured a URL (PRD-12 S10). */}
+          {externalOrderingUrl && onExternalOrder && (
+            <button onClick={onExternalOrder}
+              className="w-full py-4 text-white font-bold rounded-xl text-lg shadow-lg active:scale-[0.98] transition-transform"
+              style={{ backgroundColor: primaryColor }}>
+              Order Online
+            </button>
+          )}
           <button onClick={() => { loadMenu(); setPage("menu"); }}
-            className="w-full py-4 text-white font-bold rounded-xl text-lg shadow-lg active:scale-[0.98] transition-transform"
-            style={{ backgroundColor: primaryColor }}>
+            className={`w-full py-4 font-bold rounded-xl text-lg active:scale-[0.98] transition-transform ${externalOrderingUrl ? "border-2" : "text-white shadow-lg"}`}
+            style={externalOrderingUrl ? { borderColor: accent, color: accent } : { backgroundColor: primaryColor }}>
             Order Pickup
           </button>
           <button onClick={() => { loadMenu(); setPage("menu"); }}

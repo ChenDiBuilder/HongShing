@@ -149,6 +149,25 @@ export default function App() {
     setPage("home");
   }, [cart, profile]);
 
+  // External ordering CTA (PRD-12 S10 / SCRUM-78): log the redirect server-side and
+  // send the customer to the configured destination. No-op (and no CTA rendered)
+  // when no external_ordering_url is set — never a hardcoded link.
+  const openExternalOrder = useCallback(async () => {
+    if (!config.external_ordering_url) return;
+    let destination = config.external_ordering_url;
+    try {
+      const res = await fetch(api("/api/redirects/order"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ source_code: sourceRef.current ?? null }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data?.destination_url) destination = data.destination_url;
+    } catch { /* fall back to the configured URL */ }
+    window.location.assign(destination);
+  }, [config.external_ordering_url]);
+
   const showHeader = !["home", "landing", "otp", "reward"].includes(page);
   const showFooter = !["home", "landing", "otp", "reward"].includes(page);
 
@@ -156,6 +175,7 @@ export default function App() {
     <Header config={config} profile={profile} itemCount={cart.itemCount} subtotalCents={cart.subtotalCents} setPage={setPage}
       loadMenu={loadMenu} loadRewards={loadRewards} loadReservationSlots={() => {}}
       loadMyReservations={() => {}} loadCustomerOrders={loadCustomerOrders} handleLogout={handleLogout}
+      onExternalOrder={openExternalOrder}
       onSignIn={() => { returnPageRef.current = page as Page; setPage("landing"); }} />
   ) : null;
   const footer = showFooter ? <Footer setPage={setPage} config={config} /> : null;
@@ -173,6 +193,7 @@ export default function App() {
     content = (
       <HomePage primaryColor={config.primary_color} logoUrl={config.logo_url}
         secondaryColor={config.secondary_color} restaurantName={config.restaurant_name} tagline={config.tagline}
+        externalOrderingUrl={config.external_ordering_url} onExternalOrder={openExternalOrder}
         campaign={config.campaign}
         setPage={setPage} loadMenu={loadMenu}
         onClaimReward={() => { returnPageRef.current = "reward"; setPage("landing"); }} />
