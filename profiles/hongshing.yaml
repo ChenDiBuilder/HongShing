@@ -15,7 +15,7 @@ identity:
   domain: hongshing.demo.bridgewayinnovations.ca
 
 branding:
-  logo: assets/hongshing/logo.png   # Hong Shing brand mark (shipped in profiles/assets/hongshing/)
+  logo: assets/hongshing/logo.svg   # Hong Shing logo (the order.hongshing.com mark; shipped in profiles/assets/hongshing/)
   primary_color: "#b91c1c"          # TODO confirm brand colors
   secondary_color: "#1f2937"
   copy:
