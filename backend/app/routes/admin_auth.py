@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy import select
 
+from app.config import get_settings
 from app.database import AsyncSession, get_db
 from app.models import RefreshToken, User
 from app.schemas.common import AdminLoginRequest, TokenResponse, UserResponse
@@ -13,6 +14,7 @@ from app.services.auth_service import (
 from datetime import datetime, timedelta, timezone
 
 router = APIRouter()
+settings = get_settings()
 
 ACCESS_TOKEN_MAX_AGE = 60 * 15
 ADMIN_REFRESH_MAX_AGE = 60 * 60 * 12
@@ -52,7 +54,7 @@ async def admin_login(
         value=access_token,
         max_age=ACCESS_TOKEN_MAX_AGE,
         httponly=True,
-        secure=True,
+        secure=settings.cookie_secure,
         samesite="lax",
         path="/",
     )
@@ -61,7 +63,7 @@ async def admin_login(
         value=refresh_token_str,
         max_age=ADMIN_REFRESH_MAX_AGE,
         httponly=True,
-        secure=True,
+        secure=settings.cookie_secure,
         samesite="lax",
         path="/api/admin/auth",
     )
@@ -123,7 +125,7 @@ async def admin_refresh(
         value=access_token,
         max_age=ACCESS_TOKEN_MAX_AGE,
         httponly=True,
-        secure=True,
+        secure=settings.cookie_secure,
         samesite="lax",
         path="/",
     )
@@ -132,7 +134,7 @@ async def admin_refresh(
         value=new_refresh_str,
         max_age=ADMIN_REFRESH_MAX_AGE,
         httponly=True,
-        secure=True,
+        secure=settings.cookie_secure,
         samesite="lax",
         path="/api/admin/auth",
     )

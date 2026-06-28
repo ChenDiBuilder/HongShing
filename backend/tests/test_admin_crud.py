@@ -17,7 +17,8 @@ class TestAdminQR:
         token = create_access_token(owner_user.id, "owner")
         client.cookies.set("admin_access_token", token)
         resp = await client.post(
-            "/api/admin/qr-campaigns?name=Test&source_code=receipt&landing_headline=Scan+to+save"
+            "/api/admin/qr-campaigns",
+            json={"name": "Test", "source_code": "receipt", "landing_headline": "Scan to save"},
         )
         assert resp.status_code == 200
         data = resp.json()["data"]
@@ -42,7 +43,8 @@ class TestAdminRewards:
         token = create_access_token(owner_user.id, "owner")
         client.cookies.set("admin_access_token", token)
         resp = await client.post(
-            "/api/admin/reward-templates?name=$5+Off&reward_type=fixed&reward_value=500"
+            "/api/admin/reward-templates",
+            json={"name": "$5 Off", "reward_type": "fixed", "reward_value": 500},
         )
         assert resp.status_code == 200
 

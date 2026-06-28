@@ -31,6 +31,13 @@ class Settings(BaseSettings):
     # Hardcoded OTP for development/testing — set to empty string to disable
     hardcoded_otp: str = "111111"
 
+    @property
+    def cookie_secure(self) -> bool:
+        """Session cookies require HTTPS (Secure flag) in production. In dev the app
+        is served over http://localhost, where a Secure cookie is silently dropped —
+        so only enforce Secure when APP_ENV=production."""
+        return self.app_env == "production"
+
 
 @lru_cache
 def get_settings() -> Settings:

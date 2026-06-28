@@ -4,12 +4,14 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel
 from sqlalchemy import select
 
+from app.config import get_settings
 from app.database import AsyncSession, get_db
 from app.middleware.auth import require_device
 from app.models import Device
 from app.services.auth_service import create_access_token, hash_otp
 
 router = APIRouter(prefix="/api/storefront/auth", tags=["storefront-auth"])
+settings = get_settings()
 
 DEVICE_ACCESS_TOKEN_MAX_AGE = 60 * 60 * 12
 
@@ -52,7 +54,7 @@ async def device_login(
         value=token,
         max_age=DEVICE_ACCESS_TOKEN_MAX_AGE,
         httponly=True,
-        secure=True,
+        secure=settings.cookie_secure,
         samesite="lax",
         path="/",
     )

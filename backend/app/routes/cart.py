@@ -27,9 +27,14 @@ async def get_cart(
     current_user: User = Depends(require_customer),
 ):
     result = await db.execute(
-        select(Cart).where(Cart.user_id == current_user.id, Cart.is_active == True)
+        select(Cart)
+        .where(Cart.user_id == current_user.id, Cart.is_active == True)
+        .order_by(Cart.created_at.desc())
     )
-    cart = result.scalar_one_or_none()
+    # Use the newest active cart and tolerate duplicates: a non-atomic get-or-create
+    # in add_to_cart can race two rapid adds into two active carts; scalar_one_or_none
+    # would then raise MultipleResultsFound and 500 every checkout for that user.
+    cart = result.scalars().first()
     if not cart:
         return {"cart": {"items": [], "subtotal_cents": 0, "item_count": 0}}
 
@@ -70,9 +75,14 @@ async def add_to_cart(
     current_user: User = Depends(require_customer),
 ):
     result = await db.execute(
-        select(Cart).where(Cart.user_id == current_user.id, Cart.is_active == True)
+        select(Cart)
+        .where(Cart.user_id == current_user.id, Cart.is_active == True)
+        .order_by(Cart.created_at.desc())
     )
-    cart = result.scalar_one_or_none()
+    # Use the newest active cart and tolerate duplicates: a non-atomic get-or-create
+    # in add_to_cart can race two rapid adds into two active carts; scalar_one_or_none
+    # would then raise MultipleResultsFound and 500 every checkout for that user.
+    cart = result.scalars().first()
     if not cart:
         cart = Cart(user_id=current_user.id)
         db.add(cart)
@@ -142,9 +152,14 @@ async def clear_cart(
     current_user: User = Depends(require_customer),
 ):
     result = await db.execute(
-        select(Cart).where(Cart.user_id == current_user.id, Cart.is_active == True)
+        select(Cart)
+        .where(Cart.user_id == current_user.id, Cart.is_active == True)
+        .order_by(Cart.created_at.desc())
     )
-    cart = result.scalar_one_or_none()
+    # Use the newest active cart and tolerate duplicates: a non-atomic get-or-create
+    # in add_to_cart can race two rapid adds into two active carts; scalar_one_or_none
+    # would then raise MultipleResultsFound and 500 every checkout for that user.
+    cart = result.scalars().first()
     if cart:
         cart.is_active = False
         await db.commit()
@@ -157,9 +172,14 @@ async def checkout(
     current_user: User = Depends(require_customer),
 ):
     result = await db.execute(
-        select(Cart).where(Cart.user_id == current_user.id, Cart.is_active == True)
+        select(Cart)
+        .where(Cart.user_id == current_user.id, Cart.is_active == True)
+        .order_by(Cart.created_at.desc())
     )
-    cart = result.scalar_one_or_none()
+    # Use the newest active cart and tolerate duplicates: a non-atomic get-or-create
+    # in add_to_cart can race two rapid adds into two active carts; scalar_one_or_none
+    # would then raise MultipleResultsFound and 500 every checkout for that user.
+    cart = result.scalars().first()
     if not cart:
         raise HTTPException(status_code=400, detail="Cart is empty")
 

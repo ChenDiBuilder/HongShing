@@ -83,9 +83,9 @@ per-campaign `landing_headline`/`landing_subtitle` (admin-UI only), reward
 - **`storefront.enabled` gating**, **`locale.languages`/i18n**, **`identity.legal_name`**,
   **`business_mailing_address`** — currently ignored.
 - **Admin/storefront `<title>`** static at build time (only customer-web updates it at runtime).
-- **Pre-existing admin bug** (separate from the template): `POST /api/admin/qr-campaigns`
-  and `POST /api/admin/reward-templates` return **422** on the documented request shape —
-  admin "Create Campaign"/"Create Reward Template" are broken on master (2 failing tests).
+- **Stale admin tests** (not a feature bug): `test_admin_crud` posted query params to
+  `POST /api/admin/qr-campaigns` / `reward-templates`, which take JSON bodies — so the tests
+  404'd/422'd while the admin UI (which sends JSON) works fine. Tests corrected to send bodies.
 
 ## Validation checklist (per new clone)
 
