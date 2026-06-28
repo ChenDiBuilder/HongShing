@@ -1,3 +1,5 @@
+import { formatPrice } from "../types";
+
 interface HeaderProps {
   config: any;
   profile?: any;
@@ -14,7 +16,7 @@ interface HeaderProps {
 }
 
 export function Header({ config, profile, itemCount, subtotalCents, setPage, loadMenu, loadRewards, loadReservationSlots: _rs, loadMyReservations: _mr, loadCustomerOrders, handleLogout, onSignIn }: HeaderProps) {
-  const primary = config?.primary_color || "#C41E3A";
+  const primary = config?.primary_color || "#111827";
 
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-gray-100">
@@ -62,7 +64,7 @@ function CartBtn({ itemCount, subtotalCents, onClick }: { itemCount: number; sub
   }
   return (
     <button onClick={onClick} className="relative px-3 py-1.5 rounded-full text-sm font-medium text-gray-600 hover:bg-gray-100">
-      Cart · ${(subtotalCents / 100).toFixed(2)}
+      Cart · {formatPrice(subtotalCents)}
     </button>
   );
 }

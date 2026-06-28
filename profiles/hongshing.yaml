@@ -58,6 +58,23 @@ compliance:
   support_phone: "+1 416-555-0188"                # customer-facing support line (demo value)
   business_mailing_address: ""      # TODO CASL — registered mailing address (required to send marketing SMS)
 
+location:                           # customer-facing storefront display (PRD-12 S8)
+  address: "195 Dundas St W, Toronto, ON M5G 1C7"
+  phone: "+14169773338"             # main restaurant line (home-page tel: link)
+  pickup_estimate: "20–30 minutes"
+  hours_display:
+    Mon: "11:30 AM – 9:00 PM"
+    Tue: "Closed"
+    Wed: "11:30 AM – 9:00 PM"
+    Thu: "11:30 AM – 9:00 PM"
+    Fri: "11:30 AM – 10:00 PM"
+    Sat: "11:30 AM – 10:00 PM"
+    Sun: "11:30 AM – 9:00 PM"
+
+pricing:
+  tax_rate: 0.13                    # Ontario HST
+  currency_symbol: "$"
+
 hours:                              # drives the EC2 start/stop schedule
   open: "11:00"                     # TODO confirm real open hours
   close: "22:00"

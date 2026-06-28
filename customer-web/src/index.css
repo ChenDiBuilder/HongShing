@@ -1,7 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --color-primary: #c41e3a;
+  /* Neutral fallback only; the live brand color comes from landing-config at runtime. */
+  --color-primary: #111827;
 }
 
 body {

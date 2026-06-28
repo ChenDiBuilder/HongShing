@@ -8,6 +8,7 @@ import { CartPage } from "./pages/CartPage";
 import { LandingPage, OtpPage, RewardPage } from "./pages/AuthPages";
 import { OrderConfirmation, OrderTracking, ProfileRewards } from "./pages/OrderPages";
 import { ReservationPage, TermsPage, PrivacyPage } from "./pages/ReservationPage";
+import { applyRestaurantConfig } from "./types";
 import type { Page, LandingConfig, MenuItemType, UserReward } from "./types";
 
 const HARDCODED_OTP = "111111";
@@ -20,7 +21,7 @@ export default function App() {
   const [error, setError] = useState("");
   const [profile, setProfile] = useState<any>(null);
   const [rewards, setRewards] = useState<UserReward[]>([]);
-  const [config, setConfig] = useState<LandingConfig>({ restaurant_name: "", primary_color: "#C41E3A", allow_order_without_signup: true });
+  const [config, setConfig] = useState<LandingConfig>({ restaurant_name: "", primary_color: "#111827", allow_order_without_signup: true });
   const [menu, setMenu] = useState<any[]>([]);
   const [activeCategory, setActiveCategory] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<MenuItemType | null>(null);
@@ -48,6 +49,7 @@ export default function App() {
   useEffect(() => {
     fetch(api(`/api/public/landing-config${sourceRef.current ? `?source=${sourceRef.current}` : ""}`))
       .then((r) => r.json()).then((cfg: LandingConfig) => {
+        applyRestaurantConfig(cfg);
         setConfig(cfg);
         if (cfg.restaurant_name) document.title = `${cfg.restaurant_name} — Pickup & Rewards`;
       }).catch(() => {});

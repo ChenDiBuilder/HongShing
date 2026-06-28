@@ -68,8 +68,8 @@ export function OrderConfirmation({ order, primaryColor, setPage, loadMenu }: Or
       )}
 
       <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-6 max-w-sm mx-auto text-left text-sm space-y-2">
-        <div className="flex justify-between"><span className="text-gray-400">Pickup at</span><span className="font-medium">{RESTAURANT_INFO.address}</span></div>
-        <div className="flex justify-between"><span className="text-gray-400">Est. ready</span><span className="font-medium">{RESTAURANT_INFO.pickupEstimate}</span></div>
+        {RESTAURANT_INFO.address && <div className="flex justify-between"><span className="text-gray-400">Pickup at</span><span className="font-medium">{RESTAURANT_INFO.address}</span></div>}
+        {RESTAURANT_INFO.pickupEstimate && <div className="flex justify-between"><span className="text-gray-400">Est. ready</span><span className="font-medium">{RESTAURANT_INFO.pickupEstimate}</span></div>}
         <div className="flex justify-between"><span className="text-gray-400">Payment</span><span className="font-medium">Pay at pickup</span></div>
       </div>
 
@@ -185,7 +185,7 @@ export function ProfileRewards({ rewards, primaryColor, setPage, loadRewards }: 
           }} />
         </div>
         {totalCount < 3 ? (
-          <p className="text-xs text-gray-400 mt-1">Order pickup {3 - totalCount} more {3 - totalCount === 1 ? "time" : "times"} to earn a $5 reward</p>
+          <p className="text-xs text-gray-400 mt-1">Order pickup {3 - totalCount} more {3 - totalCount === 1 ? "time" : "times"} to earn a reward</p>
         ) : (
           <p className="text-xs text-green-600 font-medium mt-1">You've earned a reward! Check below.</p>
         )}
@@ -195,7 +195,7 @@ export function ProfileRewards({ rewards, primaryColor, setPage, loadRewards }: 
         <div className="text-center py-12 text-gray-400">
           <p className="text-4xl mb-3">🎁</p>
           <p className="text-lg font-medium mb-1">No rewards yet</p>
-          <p className="text-sm">Order pickup 3 times to earn your first $5 reward!</p>
+          <p className="text-sm">Order pickup 3 times to earn your first reward!</p>
         </div>
       ) : (
         rewards.map((r: any) => (
@@ -208,7 +208,7 @@ export function ProfileRewards({ rewards, primaryColor, setPage, loadRewards }: 
             </div>
             <p className="text-2xl font-mono font-bold tracking-wider" style={{ color: primaryColor }}>{r.code}</p>
             {r.reward_value && (
-              <p className="text-sm text-gray-600 mt-1">${(r.reward_value / 100).toFixed(2)} off your order</p>
+              <p className="text-sm text-gray-600 mt-1">{formatPrice(r.reward_value)} off your order</p>
             )}
             {r.expires_at && <p className="text-xs text-gray-400 mt-1">Expires {new Date(r.expires_at).toLocaleDateString()}</p>}
             {r.status === "issued" && (
