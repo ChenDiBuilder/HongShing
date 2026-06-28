@@ -24,7 +24,11 @@ EC2_IP=$(terraform output -raw ec2_public_ip)
 ECR_URL=$(terraform output -raw ecr_repository_url)
 INSTANCE_ID=$(terraform output -raw ec2_instance_id 2>/dev/null || true)
 FQDN=$(terraform output -raw fqdn)
-echo "EC2 IP: $EC2_IP   ECR: $ECR_URL   FQDN: $FQDN"
+# `slug` output post-dates the live hongshing box's persisted state; fall back to
+# the var default so a redeploy never aborts here until the next infra apply.
+SLUG=$(terraform output -raw slug 2>/dev/null || echo hongshing)
+APP_DIR="/opt/$SLUG"   # box's user_data created /opt/<slug>
+echo "EC2 IP: $EC2_IP   ECR: $ECR_URL   FQDN: $FQDN   SLUG: $SLUG   APP_DIR: $APP_DIR"
 
 # Start the (scheduled-off) box if it's stopped.
 if [ -n "$INSTANCE_ID" ]; then
@@ -42,8 +46,8 @@ echo "=== Build + push backend image (arm64) ==="
 cd "$HERE"
 aws ecr get-login-password --profile "$AWS_PROFILE" --region "$AWS_REGION" | \
   docker login --username AWS --password-stdin "$ECR_URL"
-docker build --platform linux/arm64 -t hongshing-backend:latest ./backend
-docker tag hongshing-backend:latest "$ECR_URL:latest"
+docker build --platform linux/arm64 -t "${SLUG}-backend:latest" ./backend
+docker tag "${SLUG}-backend:latest" "$ECR_URL:latest"
 docker push "$ECR_URL:latest"
 
 echo "=== Build the 3 SPAs ==="
@@ -53,19 +57,21 @@ done
 
 echo "=== Ship app files ==="
 ssh -i ~/.ssh/${SSH_KEY}.pem "ec2-user@${EC2_IP}" \
-  "mkdir -p /opt/hongshing/www/customer /opt/hongshing/www/admin /opt/hongshing/www/store && echo '${ECR_URL}:latest' > /opt/hongshing/.backend_image"
+  "mkdir -p $APP_DIR/www/customer $APP_DIR/www/admin $APP_DIR/www/store && echo '${ECR_URL}:latest' > $APP_DIR/.backend_image"
 # Render the nginx host (__FQDN__) from the box's fqdn before shipping (template-ready).
 sed "s/__FQDN__/$FQDN/g" nginx.prod.conf > /tmp/nginx.rendered.conf
-scp -i ~/.ssh/${SSH_KEY}.pem docker-compose.prod.yml backup.sh "ec2-user@${EC2_IP}:/opt/hongshing/"
-scp -i ~/.ssh/${SSH_KEY}.pem /tmp/nginx.rendered.conf "ec2-user@${EC2_IP}:/opt/hongshing/nginx.prod.conf"
-rsync -az -e "ssh -i ~/.ssh/${SSH_KEY}.pem" customer-web/dist/  "ec2-user@${EC2_IP}:/opt/hongshing/www/customer/"
-rsync -az -e "ssh -i ~/.ssh/${SSH_KEY}.pem" admin/dist/         "ec2-user@${EC2_IP}:/opt/hongshing/www/admin/"
-rsync -az -e "ssh -i ~/.ssh/${SSH_KEY}.pem" storefront/dist/    "ec2-user@${EC2_IP}:/opt/hongshing/www/store/"
+scp -i ~/.ssh/${SSH_KEY}.pem docker-compose.prod.yml backup.sh "ec2-user@${EC2_IP}:$APP_DIR/"
+scp -i ~/.ssh/${SSH_KEY}.pem /tmp/nginx.rendered.conf "ec2-user@${EC2_IP}:$APP_DIR/nginx.prod.conf"
+rsync -az -e "ssh -i ~/.ssh/${SSH_KEY}.pem" customer-web/dist/  "ec2-user@${EC2_IP}:$APP_DIR/www/customer/"
+rsync -az -e "ssh -i ~/.ssh/${SSH_KEY}.pem" admin/dist/         "ec2-user@${EC2_IP}:$APP_DIR/www/admin/"
+rsync -az -e "ssh -i ~/.ssh/${SSH_KEY}.pem" storefront/dist/    "ec2-user@${EC2_IP}:$APP_DIR/www/store/"
 
 echo "=== Bring up the stack ==="
-ssh -i ~/.ssh/${SSH_KEY}.pem "ec2-user@${EC2_IP}" << 'ENDSSH'
+# The remote heredoc is single-quoted (no local expansion) — pass APP_DIR through
+# the remote shell's environment so $APP_DIR resolves on the box.
+ssh -i ~/.ssh/${SSH_KEY}.pem "ec2-user@${EC2_IP}" "APP_DIR='$APP_DIR' bash -s" << 'ENDSSH'
 set -e
-cd /opt/hongshing
+cd "$APP_DIR"
 IMG=$(cat .backend_image)
 # .env must already exist (created once during first-time setup — see DEPLOY-EC2.md).
 # Append/refresh only the image ref so we never clobber secrets.
@@ -77,8 +83,8 @@ docker compose -f docker-compose.prod.yml pull
 docker compose -f docker-compose.prod.yml up -d
 
 # Nightly backup cron (idempotent).
-chmod +x /opt/hongshing/backup.sh
-( crontab -l 2>/dev/null | grep -v 'hongshing/backup.sh'; echo "0 2 * * * /opt/hongshing/backup.sh >> /opt/hongshing/backups/backup.log 2>&1" ) | crontab -
+chmod +x "$APP_DIR/backup.sh"
+( crontab -l 2>/dev/null | grep -v "$APP_DIR/backup.sh"; echo "0 2 * * * $APP_DIR/backup.sh >> $APP_DIR/backups/backup.log 2>&1" ) | crontab -
 echo "Deployed. Containers:"; docker compose -f docker-compose.prod.yml ps
 ENDSSH
-echo "Done → https://hongshing.bridgewayinnovations.ca"
+echo "Done → https://$FQDN"
