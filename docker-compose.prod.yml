@@ -31,10 +31,12 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:?set CORS_ORIGINS in .env}
       AWS_REGION: us-east-1
       S3_BUCKET: ${S3_BUCKET:-hongshing-assets}
-      SNS_SENDER_ID: HongShing
+      # Read the per-clone sender id from .env (provision writes it from the
+      # profile's sms.sender_id); defaults to HongShing for the original box.
+      SNS_SENDER_ID: ${SNS_SENDER_ID:-HongShing}
       SNS_ORIGINATION_NUMBER: ${SNS_ORIGINATION_NUMBER:-+12368645995}
       # SMS-only region (out of sandbox + origination number live here); rest stays us-east-1.
-      SNS_REGION: ${SNS_REGION:-us-east-1}
+      SNS_REGION: ${SNS_REGION:-us-east-2}
       OWNER_EMAIL: ${OWNER_EMAIL:-owner@hongshing.com}
     depends_on:
       db:

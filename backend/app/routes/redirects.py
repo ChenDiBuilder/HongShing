@@ -17,12 +17,16 @@ async def external_order_redirect(db: AsyncSession = Depends(get_db)):
 
     url = settings.external_ordering_url if settings else None
 
-    # Log anonymous redirect
-    redirect_event = ExternalOrderRedirect(
-        destination_url=url or "https://hongshing.ca/order",
-        provider=settings.external_ordering_provider if settings else None,
-    )
-    db.add(redirect_event)
-    await db.commit()
+    # Only log a redirect when a destination is actually configured — never fall
+    # back to a hardcoded HongShing URL (a clone must not send customers to
+    # hongshing.ca). An unset URL returns null; the SPA shows an empty state.
+    if url:
+        db.add(
+            ExternalOrderRedirect(
+                destination_url=url,
+                provider=settings.external_ordering_provider if settings else None,
+            )
+        )
+        await db.commit()
 
-    return {"destination_url": url or "https://hongshing.ca/order"}
+    return {"destination_url": url}

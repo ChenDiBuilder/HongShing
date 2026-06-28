@@ -207,15 +207,17 @@ async def redirect_to_order(
             if reward:
                 destination = f"{destination}?promo={reward.code}"
 
+    # No hardcoded HongShing fallback — a clone with no external ordering URL
+    # returns an empty destination and the SPA shows an "ordering not set up" state.
     redirect_event = ExternalOrderRedirect(
         user_id=None,
         reward_id=body.reward_id,
         source_code=body.source_code,
         qr_campaign_id=body.campaign_id,
-        destination_url=destination or "https://hongshing.ca/order",
+        destination_url=destination,
         provider=settings.external_ordering_provider if settings else None,
     )
     db.add(redirect_event)
     await db.commit()
 
-    return OrderRedirectResponse(destination_url=destination or "https://hongshing.ca/order")
+    return OrderRedirectResponse(destination_url=destination)

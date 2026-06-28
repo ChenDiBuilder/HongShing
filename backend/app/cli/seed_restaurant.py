@@ -106,6 +106,7 @@ async def seed_restaurant(
             default_reward_template_id=default_reward_id,
             timezone=locale.get("timezone", "America/Toronto"),
             privacy_contact_email=compliance.get("privacy_contact_email") or None,
+            support_phone=compliance.get("support_phone") or None,
         )
         settings_row = (await session.execute(select(RestaurantSettings))).scalars().first()
         if settings_row:

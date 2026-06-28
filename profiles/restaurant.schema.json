@@ -105,6 +105,7 @@
       "additionalProperties": false,
       "properties": {
         "privacy_contact_email": { "type": "string" },
+        "support_phone": { "type": "string", "description": "Customer-facing support/contact phone; shown in landing-config and on the reservations page" },
         "business_mailing_address": { "type": "string" }
       }
     },
