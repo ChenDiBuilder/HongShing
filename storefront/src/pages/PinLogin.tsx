@@ -38,7 +38,7 @@ export function PinLogin({ onLogin }: Props) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-900 p-4">
       <div className="w-full max-w-sm bg-gray-800 rounded-xl p-8 text-center">
-        <h1 className="text-2xl font-bold text-white mb-2">HongShing</h1>
+        <h1 className="text-2xl font-bold text-white mb-2">Staff Login</h1>
         <p className="text-gray-400 text-sm mb-8">Storefront</p>
         <form onSubmit={handleLogin} className="space-y-4">
           <div>

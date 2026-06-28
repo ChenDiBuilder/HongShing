@@ -22,7 +22,7 @@ function QRCodeCard({ campaign }: { campaign: QRCampaign }) {
       <h3 className="font-semibold mt-3">{campaign.name}</h3>
       <code className="text-xs text-gray-500 mt-1 bg-gray-50 px-2 py-0.5 rounded font-mono">{campaign.source_code}</code>
       <p className="text-[11px] text-gray-400 mt-2 break-all leading-tight px-2">{url}</p>
-      <button onClick={() => { if (canvasRef.current) { const a = document.createElement("a"); a.href = canvasRef.current.toDataURL("image/png"); a.download = `hongshing-qr-${campaign.source_code}.png`; a.click(); } }} className="mt-3 px-4 py-1.5 bg-red-600 text-white text-sm rounded-lg">Download PNG</button>
+      <button onClick={() => { if (canvasRef.current) { const a = document.createElement("a"); a.href = canvasRef.current.toDataURL("image/png"); a.download = `qr-${campaign.source_code}.png`; a.click(); } }} className="mt-3 px-4 py-1.5 bg-red-600 text-white text-sm rounded-lg">Download PNG</button>
     </div>
   );
 }

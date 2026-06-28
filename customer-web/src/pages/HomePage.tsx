@@ -4,6 +4,7 @@ interface Props {
   primaryColor: string;
   logoUrl?: string;
   secondaryColor?: string;
+  restaurantName?: string;
   campaign?: { landing_headline?: string; landing_subtitle?: string } | null;
   setPage: (p: any) => void;
   loadMenu: () => void;
@@ -16,16 +17,16 @@ function todayHours() {
   return RESTAURANT_INFO.hours[today as keyof typeof RESTAURANT_INFO.hours] || "Hours unavailable";
 }
 
-export function HomePage({ primaryColor, logoUrl, secondaryColor: _, campaign, setPage, loadMenu, onClaimReward }: Props) {
+export function HomePage({ primaryColor, logoUrl, secondaryColor: _, restaurantName, campaign, setPage, loadMenu, onClaimReward }: Props) {
   const headline = campaign?.landing_headline || "Order Pickup & Earn Rewards";
-  const subtitle = campaign?.landing_subtitle || "Browse our menu, order ahead, and claim exclusive rewards — all from Hong Shing.";
+  const subtitle = campaign?.landing_subtitle || "Browse our menu, order ahead, and claim exclusive rewards.";
 
   return (
     <div className="min-h-screen bg-white">
       <div className="flex flex-col items-center px-4 pb-8">
-        {logoUrl && <img src={logoUrl} alt="Hong Shing" className="h-16 mt-8 mb-2" />}
+        {logoUrl && <img src={logoUrl} alt={restaurantName || "logo"} className="h-16 mt-8 mb-2" />}
         <h1 className="text-4xl font-extrabold text-center mt-6 mb-1 tracking-tight" style={{ color: primaryColor }}>
-          {campaign ? headline : "Hong Shing"}
+          {campaign ? headline : (restaurantName || "Welcome")}
         </h1>
         {!campaign && (
           <h1 className="text-4xl font-extrabold text-center mb-2 tracking-tight" style={{ color: primaryColor }}>

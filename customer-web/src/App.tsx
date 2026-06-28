@@ -20,7 +20,7 @@ export default function App() {
   const [error, setError] = useState("");
   const [profile, setProfile] = useState<any>(null);
   const [rewards, setRewards] = useState<UserReward[]>([]);
-  const [config, setConfig] = useState<LandingConfig>({ restaurant_name: "Hong Shing", primary_color: "#C41E3A", allow_order_without_signup: true });
+  const [config, setConfig] = useState<LandingConfig>({ restaurant_name: "", primary_color: "#C41E3A", allow_order_without_signup: true });
   const [menu, setMenu] = useState<any[]>([]);
   const [activeCategory, setActiveCategory] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<MenuItemType | null>(null);
@@ -47,7 +47,10 @@ export default function App() {
 
   useEffect(() => {
     fetch(api(`/api/public/landing-config${sourceRef.current ? `?source=${sourceRef.current}` : ""}`))
-      .then((r) => r.json()).then(setConfig).catch(() => {});
+      .then((r) => r.json()).then((cfg: LandingConfig) => {
+        setConfig(cfg);
+        if (cfg.restaurant_name) document.title = `${cfg.restaurant_name} — Pickup & Rewards`;
+      }).catch(() => {});
   }, []);
 
   const loadMenu = useCallback(async () => {
@@ -153,7 +156,7 @@ export default function App() {
       loadMyReservations={() => {}} loadCustomerOrders={loadCustomerOrders} handleLogout={handleLogout}
       onSignIn={() => { returnPageRef.current = page as Page; setPage("landing"); }} />
   ) : null;
-  const footer = showFooter ? <Footer setPage={setPage} /> : null;
+  const footer = showFooter ? <Footer setPage={setPage} config={config} /> : null;
 
   const wrap = (children: React.ReactNode) => (
     <div className="min-h-screen bg-gray-50">
@@ -167,11 +170,11 @@ export default function App() {
   if (page === "home") {
     content = (
       <HomePage primaryColor={config.primary_color} logoUrl={config.logo_url}
-        secondaryColor={config.secondary_color} campaign={config.campaign}
+        secondaryColor={config.secondary_color} restaurantName={config.restaurant_name} campaign={config.campaign}
         setPage={setPage} loadMenu={loadMenu}
         onClaimReward={() => { returnPageRef.current = "reward"; setPage("landing"); }} />
     );
-    content = <>{content}<Footer setPage={setPage} /></>;
+    content = <>{content}<Footer setPage={setPage} config={config} /></>;
   } else if (page === "landing") {
     content = (
       <LandingPage primaryColor={config.primary_color} setPage={setPage} setProfile={setProfile}

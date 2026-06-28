@@ -116,7 +116,7 @@ export function CartPage({ primaryColor, profile, setPage }: Props) {
 
       <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6">
         <div className="flex items-center justify-between text-sm">
-          <span className="text-amber-800 font-medium">Pickup at Hong Shing</span>
+          <span className="text-amber-800 font-medium">Pickup at the restaurant</span>
           <span className="text-amber-700">Ready in {RESTAURANT_INFO.pickupEstimate}</span>
         </div>
         <p className="text-xs text-amber-600 mt-1">Pay at pickup · {RESTAURANT_INFO.address}</p>

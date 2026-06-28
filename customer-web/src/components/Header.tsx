@@ -21,7 +21,7 @@ export function Header({ config, profile, itemCount, subtotalCents, setPage, loa
       <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
         <button onClick={() => { loadMenu(); setPage("menu"); }}
           className="flex items-center gap-2">
-          <span className="text-lg font-extrabold tracking-tight" style={{ color: primary }}>{config?.restaurant_name || "Hong Shing"}</span>
+          <span className="text-lg font-extrabold tracking-tight" style={{ color: primary }}>{config?.restaurant_name || "Restaurant"}</span>
         </button>
         <nav className="flex items-center gap-1">
           <NavBtn onClick={() => { loadMenu(); setPage("menu"); }}>Menu</NavBtn>
@@ -67,11 +67,11 @@ function CartBtn({ itemCount, subtotalCents, onClick }: { itemCount: number; sub
   );
 }
 
-export function Footer({ setPage }: { setPage: (p: any) => void }) {
+export function Footer({ setPage, config }: { setPage: (p: any) => void; config?: any }) {
   return (
     <footer className="border-t border-gray-100 bg-white">
       <div className="max-w-3xl mx-auto px-4 py-6 flex items-center justify-between text-xs text-gray-400">
-        <span>Hong Shing Chinese Restaurant</span>
+        <span>{config?.restaurant_name}</span>
         <div className="flex gap-4">
           <button onClick={() => setPage("terms")} className="hover:text-gray-600">Terms</button>
           <button onClick={() => setPage("privacy")} className="hover:text-gray-600">Privacy</button>

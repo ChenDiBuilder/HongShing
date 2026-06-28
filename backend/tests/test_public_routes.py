@@ -13,7 +13,7 @@ class TestLandingConfig:
         resp = await client.get("/api/public/landing-config")
         assert resp.status_code == 200
         data = resp.json()
-        assert data["restaurant_name"] == "HongShing"
+        assert data["restaurant_name"] == "Restaurant"  # brand-neutral default (SCRUM-49)
         assert data["primary_color"] == "#C41E3A"
         assert data["allow_order_without_signup"] is True
 

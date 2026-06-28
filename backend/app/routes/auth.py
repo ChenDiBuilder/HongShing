@@ -63,7 +63,11 @@ async def send_otp(body: SendOTPRequest, db: AsyncSession = Depends(get_db)):
     # send_sms swallows SNS errors (sandbox/missing creds); the code is already
     # persisted, so verify-otp works even when delivery is unavailable.
     if not settings.hardcoded_otp:
-        send_sms(body.phone, f"Your HongShing verification code is {code}. It expires in 5 minutes.")
+        from app.models import RestaurantSettings
+
+        rs = (await db.execute(select(RestaurantSettings))).scalars().first()
+        brand = rs.restaurant_name if (rs and rs.restaurant_name) else (settings.sns_sender_id or "your restaurant")
+        send_sms(body.phone, f"Your {brand} verification code is {code}. It expires in 5 minutes.")
     return {"ok": True, "message": "OTP sent"}
 
 
