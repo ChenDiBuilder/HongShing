@@ -34,3 +34,6 @@ hongshing_backend.egg-info/
 .env.local
 .env.production
 
+
+# Walkthrough demo screenshots are committed docs assets (exception to *.png above)
+!docs/walkthrough/img/*.png
