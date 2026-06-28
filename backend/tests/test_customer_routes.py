@@ -87,7 +87,9 @@ class TestOrderRedirect:
         assert resp.status_code == 200
         assert resp.json()["destination_url"] == "https://order.example.com"
 
-    async def test_redirect_no_url_returns_fallback(self, client):
+    async def test_redirect_no_url_returns_empty(self, client):
+        # With no external ordering URL configured, the redirect must NOT fall back
+        # to a hardcoded HongShing URL — a clone returns an empty destination.
         resp = await client.post("/api/redirects/order", json={})
         assert resp.status_code == 200
-        assert resp.json()["destination_url"] == "https://hongshing.ca/order"
+        assert resp.json()["destination_url"] == ""

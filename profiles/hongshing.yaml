@@ -54,7 +54,8 @@ locale:
   languages: [en]
 
 compliance:
-  privacy_contact_email: ""         # TODO PIPEDA contact
+  privacy_contact_email: "privacy@hongshing.ca"   # PIPEDA contact (demo value)
+  support_phone: "+1 416-555-0188"                # customer-facing support line (demo value)
   business_mailing_address: ""      # TODO CASL — registered mailing address (required to send marketing SMS)
 
 hours:                              # drives the EC2 start/stop schedule

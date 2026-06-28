@@ -51,6 +51,7 @@ locale:
 
 compliance:
   privacy_contact_email:
+  support_phone:                   # customer-facing support/contact phone
   business_mailing_address:        # required to send marketing SMS (CASL)
 
 hours:
