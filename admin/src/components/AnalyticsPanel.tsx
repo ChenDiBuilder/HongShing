@@ -140,7 +140,7 @@ export function AnalyticsPanel({ data }: { data: AnalyticsData }) {
           <h3 className="text-lg font-bold mb-4">Top Sources</h3>
           {topSources.length > 0 ? (
             <div className="space-y-4">
-              {topSources.map((src, i) => (
+              {topSources.map((src) => (
                 <div key={src.source_code}>
                   <div className="flex justify-between items-center mb-1">
                     <span className="text-sm font-medium text-gray-700 truncate">
