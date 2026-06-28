@@ -13,10 +13,14 @@ interface HeaderProps {
   loadCustomerOrders: () => void;
   handleLogout?: () => void;
   onSignIn?: () => void;
+  onExternalOrder?: () => void;
 }
 
-export function Header({ config, profile, itemCount, subtotalCents, setPage, loadMenu, loadRewards, loadReservationSlots: _rs, loadMyReservations: _mr, loadCustomerOrders, handleLogout, onSignIn }: HeaderProps) {
+export function Header({ config, profile, itemCount, subtotalCents, setPage, loadMenu, loadRewards, loadReservationSlots: _rs, loadMyReservations: _mr, loadCustomerOrders, handleLogout, onSignIn, onExternalOrder }: HeaderProps) {
   const primary = config?.primary_color || "#111827";
+  // Only show the external "Order Online" CTA when a redirect URL is configured
+  // (PRD-12 S10 / SCRUM-78) — never a hardcoded link.
+  const showOrderOnline = !!config?.external_ordering_url && !!onExternalOrder;
 
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-gray-100">
@@ -27,6 +31,7 @@ export function Header({ config, profile, itemCount, subtotalCents, setPage, loa
         </button>
         <nav className="flex items-center gap-1">
           <NavBtn onClick={() => { loadMenu(); setPage("menu"); }}>Menu</NavBtn>
+          {showOrderOnline && <NavBtn onClick={onExternalOrder!}>Order Online</NavBtn>}
           <CartBtn itemCount={itemCount} subtotalCents={subtotalCents} onClick={() => setPage("cart")} />
           {profile ? (
             <>
