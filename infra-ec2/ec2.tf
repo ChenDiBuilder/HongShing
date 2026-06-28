@@ -124,7 +124,9 @@ resource "aws_instance" "backend" {
   EOF
   )
 
-  tags = { Name = "${var.slug}-backend" }
+  # Backup=true selects this box into the Bridgeway fleet DLM snapshot policy.
+  # Declared here so a routine apply of this stack doesn't strip the tag.
+  tags = { Name = "${var.slug}-backend", Backup = "true" }
 
   # Same data-durability guardrails as the portal: most_recent AMI would
   # otherwise make a routine apply REPLACE the box and wipe the Postgres volume,
