@@ -8,7 +8,7 @@ import ReservationSlotsScreen from "./screens/ReservationSlotsScreen";
 import OrdersScreen from "./screens/OrdersScreen";
 import { AnalyticsPanel } from "./components/AnalyticsPanel";
 
-type Page = "login" | "dashboard" | "qr-campaigns" | "rewards" | "customers" | "orders" | "settings" | "devices" | "reservation-slots";
+type Page = "login" | "change-password" | "dashboard" | "qr-campaigns" | "rewards" | "customers" | "orders" | "settings" | "devices" | "reservation-slots";
 
 const apiBase = import.meta.env.DEV ? "" : "/product-demo/hongshing";
 
@@ -46,6 +46,7 @@ export default function App() {
   const [page, setPage] = useState<Page>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [dashboard, setDashboard] = useState<any>(null);
@@ -62,9 +63,27 @@ export default function App() {
     try {
       const res = await fetch(`${apiBase}/api/admin/auth/login`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ email, password }) });
       if (!res.ok) throw new Error("Invalid credentials");
+      const data = await res.json().catch(() => ({}));
+      if (data.must_change_password) { setPage("change-password"); return; }
       setPage("dashboard"); loadDashboard(); loadAnalytics();
     } catch { setError("Invalid email or password"); }
     finally { setLoading(false); }
+  }
+
+  async function handleChangePassword(e: React.FormEvent) {
+    e.preventDefault(); setLoading(true); setError("");
+    try {
+      const res = await fetch(`${apiBase}/api/admin/auth/change-password`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ current_password: password, new_password: newPassword }) });
+      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.detail || "Could not change password"); }
+      setPassword(""); setNewPassword("");
+      setPage("dashboard"); loadDashboard(); loadAnalytics();
+    } catch (err) { setError(err instanceof Error ? err.message : "Could not change password"); }
+    finally { setLoading(false); }
+  }
+
+  async function handleLogout() {
+    try { await fetch(`${apiBase}/api/admin/auth/logout`, { method: "POST", credentials: "include" }); } catch {}
+    setEmail(""); setPassword(""); setNewPassword(""); setPage("login");
   }
 
   const loadDashboard = useCallback(async () => {
@@ -104,6 +123,22 @@ export default function App() {
     );
   }
 
+  if (page === "change-password") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+        <div className="w-full max-w-sm bg-white rounded-xl shadow-md p-8">
+          <h1 className="text-2xl font-bold text-center mb-2">Set a new password</h1>
+          <p className="text-sm text-gray-500 text-center mb-6">Your account is using a temporary password. Choose a new one to continue.</p>
+          <form onSubmit={handleChangePassword} className="space-y-4">
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">New password</label><input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} minLength={8} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500" required /></div>
+            <button type="submit" disabled={loading} className="w-full py-2 bg-red-600 text-white font-semibold rounded-lg disabled:opacity-50">{loading ? "Saving..." : "Set password"}</button>
+          </form>
+          {error && <p className="text-red-500 text-sm text-center mt-4">{error}</p>}
+        </div>
+      </div>
+    );
+  }
+
   const navItems: { key: Page; label: string }[] = [
     { key: "dashboard", label: "Dashboard" },
     { key: "customers", label: "Customer Profiles" },
@@ -124,7 +159,7 @@ export default function App() {
             <button key={item.key} onClick={() => navigateTo(item.key)} className={`block w-full text-left py-2 px-3 rounded text-sm ${page === item.key ? "bg-gray-800 font-medium" : "hover:bg-gray-800 text-gray-300"}`}>{item.label}</button>
           ))}
         </nav>
-        <button onClick={() => setPage("login")} className="text-sm text-gray-500 hover:text-white">Sign Out</button>
+        <button onClick={handleLogout} className="text-sm text-gray-500 hover:text-white">Sign Out</button>
       </aside>
 
       <main className="flex-1 p-8">

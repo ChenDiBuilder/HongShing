@@ -36,6 +36,10 @@ def require_admin(allowed_roles: list[str]) -> Callable:
         user = result.scalar_one_or_none()
         if not user:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+        # Re-check the role against the live DB row, not just the token claim, so a
+        # role downgrade takes effect immediately instead of lasting until token expiry.
+        if user.role not in allowed_roles:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
 
         return user
 
