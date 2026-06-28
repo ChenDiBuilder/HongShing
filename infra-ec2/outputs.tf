@@ -18,11 +18,16 @@ output "backup_bucket" {
   value       = aws_s3_bucket.db_backups.id
 }
 
+output "fqdn" {
+  description = "The single host this box serves"
+  value       = local.fqdn
+}
+
 output "hosts" {
-  description = "Hostnames served by the box"
+  description = "URLs served by the box (admin/store are paths on the one host)"
   value = {
-    customer = local.host_customer
-    admin    = local.host_admin
-    store    = local.host_store
+    customer = "https://${local.fqdn}/"
+    admin    = "https://${local.fqdn}/admin/"
+    store    = "https://${local.fqdn}/store/"
   }
 }
