@@ -4,7 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  base: "/product-demo/hongshing-admin/",
+  base: "/admin/",
   server: {
     port: 3501,
     proxy: {

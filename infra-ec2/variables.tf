@@ -23,10 +23,12 @@ variable "domain_name" {
   default     = "bridgewayinnovations.ca"
 }
 
-variable "subdomain" {
-  description = "Customer landing host = <subdomain>.<domain_name>; admin = admin.<subdomain>..."
+# Full hostname the box serves. Empty -> <slug>.demo.<domain_name> (demo default).
+# Set to the customer's own domain at cutover (e.g. rewards.hongshing.com).
+variable "fqdn" {
+  description = "Full host the box serves; empty = <slug>.demo.<domain_name>"
   type        = string
-  default     = "hongshing"
+  default     = ""
 }
 
 variable "ssh_key_name" {

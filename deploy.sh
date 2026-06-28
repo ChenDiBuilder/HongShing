@@ -23,7 +23,8 @@ fi
 EC2_IP=$(terraform output -raw ec2_public_ip)
 ECR_URL=$(terraform output -raw ecr_repository_url)
 INSTANCE_ID=$(terraform output -raw ec2_instance_id 2>/dev/null || true)
-echo "EC2 IP: $EC2_IP   ECR: $ECR_URL"
+FQDN=$(terraform output -raw fqdn)
+echo "EC2 IP: $EC2_IP   ECR: $ECR_URL   FQDN: $FQDN"
 
 # Start the (scheduled-off) box if it's stopped.
 if [ -n "$INSTANCE_ID" ]; then
@@ -53,7 +54,10 @@ done
 echo "=== Ship app files ==="
 ssh -i ~/.ssh/${SSH_KEY}.pem "ec2-user@${EC2_IP}" \
   "mkdir -p /opt/hongshing/www/customer /opt/hongshing/www/admin /opt/hongshing/www/store && echo '${ECR_URL}:latest' > /opt/hongshing/.backend_image"
-scp -i ~/.ssh/${SSH_KEY}.pem docker-compose.prod.yml nginx.prod.conf backup.sh "ec2-user@${EC2_IP}:/opt/hongshing/"
+# Render the nginx host (__FQDN__) from the box's fqdn before shipping (template-ready).
+sed "s/__FQDN__/$FQDN/g" nginx.prod.conf > /tmp/nginx.rendered.conf
+scp -i ~/.ssh/${SSH_KEY}.pem docker-compose.prod.yml backup.sh "ec2-user@${EC2_IP}:/opt/hongshing/"
+scp -i ~/.ssh/${SSH_KEY}.pem /tmp/nginx.rendered.conf "ec2-user@${EC2_IP}:/opt/hongshing/nginx.prod.conf"
 rsync -az -e "ssh -i ~/.ssh/${SSH_KEY}.pem" customer-web/dist/  "ec2-user@${EC2_IP}:/opt/hongshing/www/customer/"
 rsync -az -e "ssh -i ~/.ssh/${SSH_KEY}.pem" admin/dist/         "ec2-user@${EC2_IP}:/opt/hongshing/www/admin/"
 rsync -az -e "ssh -i ~/.ssh/${SSH_KEY}.pem" storefront/dist/    "ec2-user@${EC2_IP}:/opt/hongshing/www/store/"
