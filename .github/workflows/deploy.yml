@@ -1,0 +1,105 @@
+name: Deploy to prod
+
+# ─────────────────────────────────────────────────────────────────────────────
+# AUTO-DEPLOY ON MERGE TO main — INTENTIONALLY DISABLED FOR NOW.
+#
+# This mirrors deploy.sh --app-only: build + push the backend image to ECR
+# (arm64 — the box is Graviton/t4g), build the three SPAs, rsync them to the box,
+# and `docker compose up -d` over SSH. No terraform (no infra changes).
+#
+# TO FLIP IT ON when ready:
+#   1. Uncomment the `push:` trigger below.
+#   2. Uncomment the whole `deploy:` job.
+#   3. Add the repo secrets listed at the bottom of the deploy job.
+#   4. (Recommended) require the existing "CI" checks before this runs — e.g.
+#      switch the trigger to `workflow_run` on CI success, or add branch
+#      protection so main only advances through green CI.
+#
+# Until then this file only exposes a manual `workflow_dispatch` that reports the
+# disabled state, so merging to main does NOT deploy.
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  workflow_dispatch:
+  # push:
+  #   branches: [main]
+
+jobs:
+  disabled-notice:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "Auto-deploy is DISABLED."
+          echo "Uncomment the 'push' trigger and the 'deploy' job in"
+          echo ".github/workflows/deploy.yml (and add the secrets) to enable."
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Real deploy job — uncomment to enable (see header).
+  # ───────────────────────────────────────────────────────────────────────────
+  # deploy:
+  #   name: Build + ship to the hongshing box (app-only)
+  #   runs-on: ubuntu-latest
+  #   permissions:
+  #     id-token: write        # AWS OIDC
+  #     contents: read
+  #   env:
+  #     AWS_REGION: us-east-1
+  #     APP_DIR: /opt/hongshing
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #
+  #     # --- AWS auth via OIDC (create the role + set AWS_DEPLOY_ROLE_ARN) ---
+  #     - uses: aws-actions/configure-aws-credentials@v4
+  #       with:
+  #         role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+  #         aws-region: ${{ env.AWS_REGION }}
+  #     - id: ecr
+  #       uses: aws-actions/amazon-ecr-login@v2
+  #
+  #     # --- Backend image (arm64 — Graviton box) ---
+  #     - uses: docker/setup-qemu-action@v3
+  #     - uses: docker/setup-buildx-action@v3
+  #     - name: Build + push backend image
+  #       uses: docker/build-push-action@v6
+  #       with:
+  #         context: ./backend
+  #         platforms: linux/arm64
+  #         push: true
+  #         tags: ${{ steps.ecr.outputs.registry }}/hongshing-backend:latest
+  #
+  #     # --- SPAs ---
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         node-version: 22
+  #     - name: Build SPAs
+  #       run: |
+  #         for app in customer-web admin storefront; do
+  #           ( cd "$app" && npm ci && npm run build )
+  #         done
+  #
+  #     # --- Ship to the box over SSH ---
+  #     - name: Prepare SSH
+  #       run: |
+  #         mkdir -p ~/.ssh
+  #         echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy.pem
+  #         chmod 600 ~/.ssh/deploy.pem
+  #         ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts
+  #     - name: Sync assets + restart containers
+  #       env:
+  #         HOST: ec2-user@${{ secrets.DEPLOY_HOST }}
+  #         REGISTRY: ${{ steps.ecr.outputs.registry }}
+  #       run: |
+  #         ssh -i ~/.ssh/deploy.pem "$HOST" "mkdir -p $APP_DIR/www/customer $APP_DIR/www/admin $APP_DIR/www/store"
+  #         rsync -az -e "ssh -i ~/.ssh/deploy.pem" customer-web/dist/ "$HOST:$APP_DIR/www/customer/"
+  #         rsync -az -e "ssh -i ~/.ssh/deploy.pem" admin/dist/        "$HOST:$APP_DIR/www/admin/"
+  #         rsync -az -e "ssh -i ~/.ssh/deploy.pem" storefront/dist/   "$HOST:$APP_DIR/www/store/"
+  #         scp -i ~/.ssh/deploy.pem docker-compose.prod.yml "$HOST:$APP_DIR/"
+  #         ssh -i ~/.ssh/deploy.pem "$HOST" "cd $APP_DIR \
+  #           && aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $REGISTRY \
+  #           && docker compose -f docker-compose.prod.yml pull \
+  #           && docker compose -f docker-compose.prod.yml up -d"
+  #
+  #   # Required to flip on:
+  #   #   secrets.AWS_DEPLOY_ROLE_ARN — IAM role (GitHub OIDC trust) with ECR push perms
+  #   #   secrets.DEPLOY_SSH_KEY      — private key for ec2-user on the box
+  #   #   secrets.DEPLOY_HOST         — the box's public IP / DNS
