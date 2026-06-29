@@ -11,9 +11,14 @@ const ts = Date.now();
 const testPhone = `+1647${String(ts).slice(-7)}`;
 const shortPhone = testPhone.slice(2);
 
+// Demo OTP (111111) was removed — real-SMS only. A real texted code can't be read
+// by an automated test against the live prod box, so customer-login journeys are
+// skipped below. Set TEST_OTP (via a non-prod mint-otp endpoint) to re-enable them.
+const TEST_OTP = process.env.TEST_OTP ?? "";
+
 test.describe("HongShing Production E2E", () => {
 
-  test("01 — Customer: send OTP and verify", async ({ page, request }) => {
+  test("01 — Customer: can request a code; a wrong code is rejected", async ({ page }) => {
     test.setTimeout(90000);
     await page.goto(`${CUSTOMER}/?source=receipt`);
     await page.waitForTimeout(3000);
@@ -25,17 +30,18 @@ test.describe("HongShing Production E2E", () => {
     await page.locator("button:has-text('Send Code')").click();
     await page.waitForTimeout(2000);
 
-    const otp = "111111";
-
-    // Enter OTP on the OTP page
+    // send-otp succeeded → the 6-digit code screen appears.
     const codeInput = page.locator('input[inputmode="numeric"]').first();
     await expect(codeInput).toBeVisible({ timeout: 5000 });
-    await codeInput.fill(otp);
+
+    // Real-SMS only (no 111111 bypass): a wrong code must NOT log the user in.
+    await codeInput.fill("000000");
     await page.locator("button:has-text('Verif')").click();
     await page.waitForTimeout(3000);
 
-    // Should see reward page with Browse Menu button
-    await expect(page.locator("button:has-text('Browse Menu'), button:has-text('Menu')").first()).toBeVisible({ timeout: 10000 });
+    // Still on the code screen; the reward page's "Browse Menu" never appears.
+    await expect(codeInput).toBeVisible();
+    await expect(page.locator("button:has-text('Browse Menu')")).toHaveCount(0);
   });
 
   test("02 — Admin: login, see dashboard", async ({ page }) => {
@@ -94,7 +100,10 @@ test.describe("HongShing Production E2E", () => {
     await expect(page.locator("text=Today's Reservations")).toBeVisible({ timeout: 5000 });
   });
 
-  test("04 — Customer: returning sign-in and view orders", async ({ page, request }) => {
+  // Skipped: needs a successful customer OTP login. Real-SMS only now (the 111111
+  // demo bypass was removed), and a real texted code can't be read by an automated
+  // test against prod. Re-enable by wiring TEST_OTP to a non-prod mint-otp endpoint.
+  test.skip("04 — Customer: returning sign-in and view orders", async ({ page, request }) => {
     test.setTimeout(90000);
     await page.goto(`${CUSTOMER}/?source=receipt`);
     await page.waitForTimeout(3000);
@@ -106,7 +115,7 @@ test.describe("HongShing Production E2E", () => {
     await page.locator("button:has-text('Send Code')").click();
     await page.waitForTimeout(2000);
 
-    const otp = "111111";
+    const otp = TEST_OTP;
 
     const codeInput = page.locator('input[inputmode="numeric"]').first();
     await expect(codeInput).toBeVisible({ timeout: 5000 });

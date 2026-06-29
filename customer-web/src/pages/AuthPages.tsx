@@ -79,11 +79,6 @@ export function OtpPage({ phone, setOtp, otp, loading, error, handleVerify, setP
           <h1 className="text-2xl font-bold mb-1" style={{ color: primaryColor }}>Enter Your Code</h1>
           <p className="text-gray-500 text-sm mb-2">We sent a 6-digit code to {phone}</p>
 
-          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-5">
-            <p className="text-amber-800 text-xs font-medium">Demo mode</p>
-            <p className="text-amber-700 text-sm">Use code <span className="font-bold tracking-wider">111111</span></p>
-          </div>
-
           <div className="space-y-4">
             <input
               type="text" inputMode="numeric" maxLength={6}

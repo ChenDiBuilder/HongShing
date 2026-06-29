@@ -4,7 +4,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", extra="ignore"
+    )
 
     app_env: str = "development"
     secret_key: str = "change-me-in-production"
@@ -33,9 +35,6 @@ class Settings(BaseSettings):
 
     # OTP pepper for hashing phone/IP before storing in rate limit table
     otp_pepper: str = "change-me-in-production"
-
-    # Hardcoded OTP for development/testing — set to empty string to disable
-    hardcoded_otp: str = "111111"
 
     @property
     def cookie_secure(self) -> bool:

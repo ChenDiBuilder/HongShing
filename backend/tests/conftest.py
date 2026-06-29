@@ -23,6 +23,15 @@ def _get_test_db_url() -> str:
     )
 
 
+@pytest.fixture(autouse=True)
+def _no_real_sms(monkeypatch):
+    """Never hit AWS SNS during tests. The removed hardcoded-OTP demo path used to
+    short-circuit SMS in send-otp; now send-otp always calls send_sms, so stub it.
+    auth.py imports send_sms from this module at call time, so patching the module
+    attribute is sufficient."""
+    monkeypatch.setattr("app.services.sms_service.send_sms", lambda *a, **k: None)
+
+
 @pytest_asyncio.fixture
 async def db_session() -> AsyncGenerator[AsyncSession, None]:
     """Each test gets its own engine, session, and transaction."""

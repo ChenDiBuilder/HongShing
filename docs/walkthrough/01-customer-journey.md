@@ -26,8 +26,9 @@ the rewards program.
 
 ![Phone number entry](img/02-customer-phone.png)
 
-A 6-digit code is texted to the diner. In demo mode the code is shown on screen
-(`111111`) so you can run the flow without sending real SMS.
+A 6-digit code is texted to the diner via SMS and entered to verify the number.
+(In local development the code is logged to the backend console instead of being
+sent — there is no demo bypass code.)
 
 ![Verification code](img/03-customer-otp.png)
 

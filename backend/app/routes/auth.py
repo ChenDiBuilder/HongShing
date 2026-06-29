@@ -58,17 +58,18 @@ async def send_otp(body: SendOTPRequest, db: AsyncSession = Depends(get_db)):
     )
     await db.commit()
 
-    # Demo mode (hardcoded_otp set): verify-otp accepts the hardcoded code, so
-    # skip the real SMS send and its cost — the generated code is still stored.
-    # send_sms swallows SNS errors (sandbox/missing creds); the code is already
-    # persisted, so verify-otp works even when delivery is unavailable.
-    if not settings.hardcoded_otp:
-        from app.models import RestaurantSettings
+    from app.models import RestaurantSettings
 
-        rs = (await db.execute(select(RestaurantSettings))).scalars().first()
-        brand = rs.restaurant_name if (rs and rs.restaurant_name) else (settings.sns_sender_id or "your restaurant")
-        template = rs.otp_sms_template if rs else None
-        send_sms(body.phone, render_otp_message(template, brand, code))
+    rs = (await db.execute(select(RestaurantSettings))).scalars().first()
+    brand = rs.restaurant_name if (rs and rs.restaurant_name) else (settings.sns_sender_id or "your restaurant")
+    template = rs.otp_sms_template if rs else None
+    # Non-prod: log the code so local dev can sign in without real SMS delivery
+    # (replaces the former hardcoded-OTP demo path). send_sms swallows SNS errors
+    # (sandbox/missing creds), so verify-otp still works from the persisted code
+    # even when delivery is unavailable.
+    if settings.app_env != "production":
+        print(f"[OTP] dev login code for {body.phone}: {code}")
+    send_sms(body.phone, render_otp_message(template, brand, code))
     return {"ok": True, "message": "OTP sent"}
 
 
@@ -76,39 +77,35 @@ async def send_otp(body: SendOTPRequest, db: AsyncSession = Depends(get_db)):
 async def verify_otp(
     body: VerifyOTPRequest, response: Response, db: AsyncSession = Depends(get_db)
 ):
-    if settings.hardcoded_otp:
-        if body.code != settings.hardcoded_otp:
-            raise HTTPException(status_code=401, detail="Invalid or expired OTP")
-    else:
-        from app.models import OTPCode
-        from app.services.auth_service import hash_otp
+    from app.models import OTPCode
+    from app.services.auth_service import hash_otp
 
-        code_hash = hash_otp(body.code)
+    code_hash = hash_otp(body.code)
 
-        result = await db.execute(
-            select(OTPCode)
-            .where(
-                OTPCode.phone == body.phone,
-                OTPCode.code_hash == code_hash,
-                OTPCode.consumed == False,  # noqa: E712
-                OTPCode.expires_at > datetime.now(timezone.utc),
-            )
-            .order_by(OTPCode.created_at.desc())
-            .limit(1)
+    result = await db.execute(
+        select(OTPCode)
+        .where(
+            OTPCode.phone == body.phone,
+            OTPCode.code_hash == code_hash,
+            OTPCode.consumed == False,  # noqa: E712
+            OTPCode.expires_at > datetime.now(timezone.utc),
         )
-        otp_code = result.scalar_one_or_none()
+        .order_by(OTPCode.created_at.desc())
+        .limit(1)
+    )
+    otp_code = result.scalar_one_or_none()
 
-        if not otp_code:
-            raise HTTPException(status_code=401, detail="Invalid or expired OTP")
+    if not otp_code:
+        raise HTTPException(status_code=401, detail="Invalid or expired OTP")
 
-        if otp_code.attempt_count >= 5:
-            raise HTTPException(status_code=429, detail="Too many attempts")
+    if otp_code.attempt_count >= 5:
+        raise HTTPException(status_code=429, detail="Too many attempts")
 
-        otp_code.attempt_count += 1
-        await db.flush()
+    otp_code.attempt_count += 1
+    await db.flush()
 
-        otp_code.consumed = True
-        otp_code.consumed_at = datetime.now(timezone.utc)
+    otp_code.consumed = True
+    otp_code.consumed_at = datetime.now(timezone.utc)
 
     result = await db.execute(select(User).where(User.phone == body.phone))
     user = result.scalar_one_or_none()

@@ -42,8 +42,6 @@ def _assert_prod_safety() -> None:
     if settings.app_env != "production":
         return
     problems = []
-    if settings.hardcoded_otp:
-        problems.append('HARDCODED_OTP must be empty in production (set HARDCODED_OTP="")')
     if settings.secret_key == "change-me-in-production":
         problems.append("SECRET_KEY is still the insecure default")
     if settings.otp_pepper == "change-me-in-production":

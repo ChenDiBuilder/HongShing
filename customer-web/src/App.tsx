@@ -11,8 +11,6 @@ import { ReservationPage, TermsPage, PrivacyPage } from "./pages/ReservationPage
 import { applyRestaurantConfig } from "./types";
 import type { Page, LandingConfig, MenuItemType, UserReward } from "./types";
 
-const HARDCODED_OTP = "111111";
-
 export default function App() {
   const [page, setPage] = useState<Page>("menu");
   const [phone, setPhone] = useState("");
@@ -31,7 +29,6 @@ export default function App() {
   const cart = createCartState(profile);
 
   const sourceRef = useRef<string | undefined>(undefined);
-  const autoVerifyRef = useRef(false);
   const returnPageRef = useRef<Page>("menu");
 
   useEffect(() => {
@@ -118,18 +115,6 @@ export default function App() {
     e.preventDefault();
     await verifyCode(otp);
   }
-
-  useEffect(() => {
-    if (page === "otp" && phone && !autoVerifyRef.current) {
-      autoVerifyRef.current = true;
-      setOtp(HARDCODED_OTP);
-      const timer = setTimeout(() => verifyCode(HARDCODED_OTP), 600);
-      return () => clearTimeout(timer);
-    }
-    if (page !== "otp") {
-      autoVerifyRef.current = false;
-    }
-  }, [page, phone, verifyCode]);
 
   const loadCustomerOrders = useCallback(() => {
     if (!profile) return;

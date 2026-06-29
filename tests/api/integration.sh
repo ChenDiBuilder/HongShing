@@ -16,8 +16,13 @@ pass() { PASS=$((PASS + 1)); printf "${GREEN}PASS${NC} %s\n" "$1"; }
 fail() { FAIL=$((FAIL + 1)); printf "${RED}FAIL${NC} %s — %s\n" "$1" "$2"; }
 
 # ---------- helpers ----------
+# Customer OTP: the demo 111111 bypass was removed (real-SMS only). A real texted
+# code can't be read by an automated test against prod, so the customer flows below
+# need TEST_OTP — wire it to a non-prod mint-otp endpoint. Without it we skip cleanly
+# (see the guard before Scenario 1) rather than report false failures.
+TEST_OTP="${TEST_OTP:-}"
 get_otp() {
-  echo "111111"
+  echo "$TEST_OTP"
 }
 
 admin_login() {
@@ -25,6 +30,13 @@ admin_login() {
     -H "Content-Type: application/json" \
     -d '{"email":"owner@hongshing.com","password":"admin123"}' > /dev/null
 }
+
+# The scenarios below all hinge on a customer session (step 1d onward). Without a
+# usable OTP there's nothing to test against prod, so skip cleanly.
+if [ -z "$TEST_OTP" ]; then
+  printf "${CYAN}SKIP${NC} integration suite — set TEST_OTP (via a non-prod mint-otp endpoint) to run the customer flows.\n"
+  exit 0
+fi
 
 # ---------- Scenario 1: Customer places order, storefront sees it ----------
 echo ""

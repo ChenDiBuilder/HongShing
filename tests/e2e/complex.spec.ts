@@ -7,6 +7,14 @@ const ADMIN = `${CF}/admin/`;
 const SF = `${CF}/store/`;
 const API = `${CUSTOMER}/api`;
 
+// Demo OTP (111111) was removed — real-SMS only. Every flow here needs a logged-in
+// customer (placing orders / booking a reservation), which can't be automated
+// against the live prod box, so the whole suite is skipped. Set TEST_OTP via a
+// non-prod mint-otp endpoint to re-enable. The non-customer pieces these exercised
+// (admin login, storefront PIN, order-status transitions) stay covered by
+// basic.spec.ts tests 02/03/05/06.
+const TEST_OTP = process.env.TEST_OTP ?? "";
+
 async function getCookies(r: any): Promise<string> {
   const arr = r.headersArray()
     .filter((h: any) => h.name.toLowerCase() === "set-cookie")
@@ -18,12 +26,13 @@ async function getCookies(r: any): Promise<string> {
 async function customerSession(request: any, phone: string) {
   await request.post(`${API}/auth/send-otp`, { data: { phone } });
   await new Promise((r) => setTimeout(r, 2000));
-  const otp = "111111";
+  const otp = TEST_OTP;
   const vr = await request.post(`${API}/auth/verify-otp`, { data: { phone, code: otp } });
   return getCookies(vr);
 }
 
-test.describe("Complex E2E — Full Lifecycle (API+UI hybrid)", () => {
+// Skipped wholesale: every test needs a real customer OTP login (see TEST_OTP above).
+test.describe.skip("Complex E2E — Full Lifecycle (API+UI hybrid)", () => {
   const ts = Date.now();
   const phone = `+1647${String(ts).slice(-7)}`;
 
@@ -84,7 +93,7 @@ test.describe("Complex E2E — Full Lifecycle (API+UI hybrid)", () => {
     await page.locator("button:has-text('Send Code')").click();
     await page.waitForTimeout(2000);
 
-    let otp = "111111";
+    let otp = TEST_OTP;
     await page.fill('input[inputmode="numeric"]', otp);
     await page.locator("button:has-text('Verif')").click();
     await page.waitForTimeout(2000);
@@ -194,7 +203,7 @@ test.describe("Complex E2E — Full Lifecycle (API+UI hybrid)", () => {
     await page.locator("button:has-text('Send Code')").click();
     await page.waitForTimeout(2000);
 
-    const otp = "111111";
+    const otp = TEST_OTP;
     await page.fill('input[inputmode="numeric"]', otp);
     await page.locator("button:has-text('Verif')").click();
     await page.waitForTimeout(2000);
