@@ -15,6 +15,8 @@ restaurant (see [`TEMPLATE-VALIDATION.md`](../../TEMPLATE-VALIDATION.md)).
 
 ## The walkthrough
 
+Start with **[How it works](00-overview.md)** for the platform overview and diagrams, then:
+
 1. **[Customer journey](01-customer-journey.md)** — the QR-to-reward-to-reorder loop a diner experiences.
 2. **[Admin operations](02-admin-operations.md)** — what the owner sees and controls.
 3. **[Storefront kiosk](03-storefront-kiosk.md)** — how staff run the order queue.

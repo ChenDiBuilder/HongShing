@@ -1,0 +1,26 @@
+<svg width="680" viewBox="0 0 680 250" role="img" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif">
+<title>HongShing QR source attribution</title>
+<desc>Each QR placement carries its own source code; when a diner signs up the source is recorded, so the admin dashboard shows which placement drives the most signups and proves ROI.</desc>
+<defs>
+<marker id="ah3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#888780"/></marker>
+</defs>
+<rect x="40" y="54" width="150" height="46" rx="8" fill="#FAECE7" stroke="#993C1D" stroke-width="1.5"/>
+<text x="115" y="74" text-anchor="middle" font-size="14" font-weight="500" fill="#712B13">Table tent</text>
+<text x="115" y="91" text-anchor="middle" font-size="11" fill="#993C1D">?source=table_tent</text>
+<rect x="40" y="110" width="150" height="46" rx="8" fill="#FAECE7" stroke="#993C1D" stroke-width="1.5"/>
+<text x="115" y="130" text-anchor="middle" font-size="14" font-weight="500" fill="#712B13">Counter card</text>
+<text x="115" y="147" text-anchor="middle" font-size="11" fill="#993C1D">?source=counter</text>
+<rect x="40" y="166" width="150" height="46" rx="8" fill="#FAECE7" stroke="#993C1D" stroke-width="1.5"/>
+<text x="115" y="186" text-anchor="middle" font-size="14" font-weight="500" fill="#712B13">Receipt</text>
+<text x="115" y="203" text-anchor="middle" font-size="11" fill="#993C1D">?source=receipt</text>
+<path d="M190 77 L288 130" stroke="#888780" stroke-width="2" fill="none" marker-end="url(#ah3)"/>
+<path d="M190 133 L288 133" stroke="#888780" stroke-width="2" fill="none" marker-end="url(#ah3)"/>
+<path d="M190 189 L288 136" stroke="#888780" stroke-width="2" fill="none" marker-end="url(#ah3)"/>
+<rect x="290" y="110" width="160" height="46" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+<text x="370" y="130" text-anchor="middle" font-size="14" font-weight="500" fill="#3C3489">Signup recorded</text>
+<text x="370" y="147" text-anchor="middle" font-size="11" fill="#534AB7">tagged with its source</text>
+<path d="M450 133 L488 133" stroke="#888780" stroke-width="2" fill="none" marker-end="url(#ah3)"/>
+<rect x="490" y="110" width="150" height="46" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="1.5"/>
+<text x="565" y="130" text-anchor="middle" font-size="14" font-weight="500" fill="#085041">Top sources</text>
+<text x="565" y="147" text-anchor="middle" font-size="11" fill="#0F6E56">proves the ROI</text>
+</svg>

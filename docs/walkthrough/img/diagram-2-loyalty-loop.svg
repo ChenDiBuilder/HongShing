@@ -1,0 +1,24 @@
+<svg width="680" viewBox="0 0 680 216" role="img" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif">
+<title>HongShing customer loyalty loop</title>
+<desc>A diner scans a QR code, joins by phone, gets a reward, orders pickup, and tracks it by text — then comes back to redeem, closing the loyalty loop.</desc>
+<defs>
+<marker id="ah2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#888780"/></marker>
+<marker id="ahc" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#D85A30"/></marker>
+</defs>
+<rect x="40" y="64" width="110" height="56" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="1.5"/>
+<text x="95" y="97" text-anchor="middle" font-size="14" font-weight="500" fill="#085041">Scan QR</text>
+<rect x="162" y="64" width="110" height="56" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="1.5"/>
+<text x="217" y="97" text-anchor="middle" font-size="14" font-weight="500" fill="#085041">Join by phone</text>
+<rect x="284" y="64" width="110" height="56" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="1.5"/>
+<text x="339" y="97" text-anchor="middle" font-size="14" font-weight="500" fill="#085041">Get reward</text>
+<rect x="406" y="64" width="110" height="56" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="1.5"/>
+<text x="461" y="97" text-anchor="middle" font-size="14" font-weight="500" fill="#085041">Order pickup</text>
+<rect x="528" y="64" width="110" height="56" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="1.5"/>
+<text x="583" y="97" text-anchor="middle" font-size="14" font-weight="500" fill="#085041">Track by text</text>
+<path d="M150 92 L162 92" stroke="#888780" stroke-width="2" fill="none" marker-end="url(#ah2)"/>
+<path d="M272 92 L284 92" stroke="#888780" stroke-width="2" fill="none" marker-end="url(#ah2)"/>
+<path d="M394 92 L406 92" stroke="#888780" stroke-width="2" fill="none" marker-end="url(#ah2)"/>
+<path d="M516 92 L528 92" stroke="#888780" stroke-width="2" fill="none" marker-end="url(#ah2)"/>
+<path d="M583 120 C 583 196, 95 196, 95 120" stroke="#D85A30" stroke-width="2.5" fill="none" marker-end="url(#ahc)"/>
+<text x="339" y="192" text-anchor="middle" font-size="11" font-weight="500" fill="#993C1D">comes back to redeem — the loyalty loop</text>
+</svg>
