@@ -136,6 +136,26 @@ async def _source_breakdown(db: AsyncSession, since: datetime) -> list[dict]:
         sc = row.source_code or "unknown"
         sources.setdefault(sc, {})["redirects"] = row.cnt
 
+    # Orders + revenue attributed to the acquisition campaign: Order -> user ->
+    # SignupEvent (one row per user, written at signup) -> source_code. First-touch
+    # attribution — a customer's orders in the window count toward the campaign that
+    # acquired them, even if they signed up in an earlier period.
+    order_rows = await db.execute(
+        select(
+            SignupEvent.source_code,
+            func.count(Order.id).label("orders"),
+            func.coalesce(func.sum(Order.total_cents), 0).label("revenue"),
+        )
+        .join(Order, Order.user_id == SignupEvent.user_id)
+        .where(Order.created_at >= since)
+        .group_by(SignupEvent.source_code)
+    )
+    for row in order_rows.all():
+        sc = row.source_code or "unknown"
+        d = sources.setdefault(sc, {})
+        d["orders"] = row.orders
+        d["revenue_cents"] = row.revenue
+
     result = []
     for sc, counts in sources.items():
         campaign_name = None
@@ -144,14 +164,23 @@ async def _source_breakdown(db: AsyncSession, since: datetime) -> list[dict]:
                 select(QRCampaign.name).where(QRCampaign.source_code == sc)
             )
             campaign_name = name
+        scans = counts.get("scans", 0)
+        signups = counts.get("signups", 0)
+        orders = counts.get("orders", 0)
         result.append(
             {
                 "source_code": sc,
                 "campaign_name": campaign_name,
-                "scans": counts.get("scans", 0),
-                "signups": counts.get("signups", 0),
+                "scans": scans,
+                "signups": signups,
                 "rewards_issued": counts.get("rewards_issued", 0),
                 "redirects": counts.get("redirects", 0),
+                "orders": orders,
+                "revenue_cents": counts.get("revenue_cents", 0),
+                # Conversion (%). None when the denominator is 0 so the UI can show
+                # "—" instead of a misleading 0% or a divide-by-zero.
+                "scan_to_signup_rate": round(signups / scans * 100, 1) if scans else None,
+                "signup_to_order_rate": round(orders / signups * 100, 1) if signups else None,
             }
         )
 
@@ -374,6 +403,10 @@ async def analytics(
                 "rewards_issued": rewards_issued_period,
                 "redirects": redirects_period,
                 "orders": orders_period,
+                # Overall conversion (%) across the period. None when the upstream
+                # count is 0 so the UI shows "—" rather than 0%/NaN.
+                "scan_to_signup_rate": round(signups_period / scans_period * 100, 1) if scans_period else None,
+                "signup_to_order_rate": round(orders_period / signups_period * 100, 1) if signups_period else None,
             },
             "sources": sources,
             "sms_opt_in_rate": sms_opt_in_rate,

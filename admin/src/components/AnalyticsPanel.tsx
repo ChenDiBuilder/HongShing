@@ -5,6 +5,11 @@ interface SourceData {
   signups: number;
   rewards_issued: number;
   redirects: number;
+  orders: number;
+  revenue_cents: number;
+  // Conversion rates (%); null when the upstream count is 0.
+  scan_to_signup_rate: number | null;
+  signup_to_order_rate: number | null;
 }
 
 interface ActivityItem {
@@ -19,7 +24,7 @@ interface AnalyticsData {
     today: { scans: number; signups: number; rewards_issued: number; rewards_redeemed: number; redirects: number; orders: number; revenue_cents: number };
     period: { scans: number; signups: number; rewards_issued: number; rewards_redeemed: number; redirects: number; orders: number; revenue_cents: number };
   };
-  funnel: { qr_scans: number; signups: number; rewards_issued: number; redirects: number; orders: number };
+  funnel: { qr_scans: number; signups: number; rewards_issued: number; redirects: number; orders: number; scan_to_signup_rate: number | null; signup_to_order_rate: number | null };
   sources: SourceData[];
   sms_opt_in_rate: number;
   daily_volume: { day: string; orders: number; revenue_cents: number }[];
@@ -146,7 +151,9 @@ export function AnalyticsPanel({ data }: { data: AnalyticsData }) {
                     <span className="text-sm font-medium text-gray-700 truncate">
                       {src.campaign_name || src.source_code}
                     </span>
-                    <span className="text-xs text-gray-400">{src.scans} scans</span>
+                    <span className="text-xs text-gray-400">
+                      {src.orders} orders · ${(src.revenue_cents / 100).toFixed(2)}
+                    </span>
                   </div>
                   <div className="flex gap-1">
                     {src.scans > 0 && (
@@ -178,10 +185,17 @@ export function AnalyticsPanel({ data }: { data: AnalyticsData }) {
                       />
                     )}
                   </div>
-                  <div className="flex gap-3 mt-1 text-xs text-gray-400">
+                  <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-xs text-gray-400">
+                    <span>{src.scans} scans</span>
                     {src.signups > 0 && <span>{src.signups} signups</span>}
                     {src.rewards_issued > 0 && <span>{src.rewards_issued} rewards</span>}
                     {src.redirects > 0 && <span>{src.redirects} redirects</span>}
+                    {src.scan_to_signup_rate != null && (
+                      <span className="text-gray-500">{src.scan_to_signup_rate}% scan→signup</span>
+                    )}
+                    {src.signup_to_order_rate != null && (
+                      <span className="text-gray-500">{src.signup_to_order_rate}% signup→order</span>
+                    )}
                   </div>
                 </div>
               ))}
