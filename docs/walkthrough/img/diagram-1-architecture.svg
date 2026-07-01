@@ -2,29 +2,29 @@
 <title>HongShing platform overview</title>
 <desc>One restaurant profile configures a FastAPI backend and PostgreSQL database that drives three surfaces — customer web, admin dashboard, and storefront kiosk — and sends SMS via AWS SNS.</desc>
 <defs>
-<marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#888780"/></marker>
+<marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#71717A"/></marker>
 </defs>
-<rect x="210" y="46" width="260" height="60" rx="8" fill="#FAECE7" stroke="#993C1D" stroke-width="1.5"/>
-<text x="340" y="74" text-anchor="middle" font-size="14" font-weight="500" fill="#712B13">Restaurant profile</text>
-<text x="340" y="93" text-anchor="middle" font-size="11" fill="#993C1D">name · colours · rewards · QR</text>
-<path d="M340 108 L340 148" stroke="#888780" stroke-width="2" fill="none" marker-end="url(#ah)"/>
-<rect x="180" y="150" width="320" height="64" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
-<text x="340" y="180" text-anchor="middle" font-size="14" font-weight="500" fill="#3C3489">FastAPI backend + PostgreSQL</text>
-<text x="340" y="199" text-anchor="middle" font-size="11" fill="#534AB7">one deployment per restaurant</text>
-<rect x="520" y="154" width="120" height="56" rx="8" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1.5"/>
-<text x="580" y="182" text-anchor="middle" font-size="14" font-weight="500" fill="#444441">SMS</text>
-<text x="580" y="200" text-anchor="middle" font-size="11" fill="#5F5E5A">AWS SNS</text>
-<path d="M500 182 L518 182" stroke="#888780" stroke-width="2" fill="none" marker-end="url(#ah)"/>
-<path d="M340 216 L130 250" stroke="#888780" stroke-width="2" fill="none" marker-end="url(#ah)"/>
-<path d="M340 216 L340 250" stroke="#888780" stroke-width="2" fill="none" marker-end="url(#ah)"/>
-<path d="M340 216 L550 250" stroke="#888780" stroke-width="2" fill="none" marker-end="url(#ah)"/>
-<rect x="40" y="252" width="176" height="64" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="1.5"/>
-<text x="128" y="280" text-anchor="middle" font-size="14" font-weight="500" fill="#085041">Customer web</text>
-<text x="128" y="300" text-anchor="middle" font-size="11" fill="#0F6E56">diners order by phone</text>
-<rect x="252" y="252" width="176" height="64" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="1.5"/>
-<text x="340" y="280" text-anchor="middle" font-size="14" font-weight="500" fill="#085041">Admin dashboard</text>
-<text x="340" y="300" text-anchor="middle" font-size="11" fill="#0F6E56">analytics + setup</text>
-<rect x="464" y="252" width="176" height="64" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="1.5"/>
-<text x="552" y="280" text-anchor="middle" font-size="14" font-weight="500" fill="#085041">Storefront kiosk</text>
-<text x="552" y="300" text-anchor="middle" font-size="11" fill="#0F6E56">staff order queue</text>
+<rect x="210" y="46" width="260" height="60" rx="8" fill="#FDECEC" stroke="#B91C1C" stroke-width="1.5"/>
+<text x="340" y="74" text-anchor="middle" font-size="14" font-weight="500" fill="#7F1D1D">Restaurant profile</text>
+<text x="340" y="93" text-anchor="middle" font-size="11" fill="#B54A4A">name · colours · rewards · QR</text>
+<path d="M340 108 L340 148" stroke="#71717A" stroke-width="2" fill="none" marker-end="url(#ah)"/>
+<rect x="180" y="150" width="320" height="64" rx="8" fill="#F4F4F5" stroke="#71717A" stroke-width="1.5"/>
+<text x="340" y="180" text-anchor="middle" font-size="14" font-weight="500" fill="#27272A">FastAPI backend + PostgreSQL</text>
+<text x="340" y="199" text-anchor="middle" font-size="11" fill="#52525B">one deployment per restaurant</text>
+<rect x="520" y="154" width="120" height="56" rx="8" fill="#F4F4F5" stroke="#71717A" stroke-width="1.5"/>
+<text x="580" y="182" text-anchor="middle" font-size="14" font-weight="500" fill="#27272A">SMS</text>
+<text x="580" y="200" text-anchor="middle" font-size="11" fill="#52525B">AWS SNS</text>
+<path d="M500 182 L518 182" stroke="#71717A" stroke-width="2" fill="none" marker-end="url(#ah)"/>
+<path d="M340 216 L130 250" stroke="#71717A" stroke-width="2" fill="none" marker-end="url(#ah)"/>
+<path d="M340 216 L340 250" stroke="#71717A" stroke-width="2" fill="none" marker-end="url(#ah)"/>
+<path d="M340 216 L550 250" stroke="#71717A" stroke-width="2" fill="none" marker-end="url(#ah)"/>
+<rect x="40" y="252" width="176" height="64" rx="8" fill="#FDECEC" stroke="#B91C1C" stroke-width="1.5"/>
+<text x="128" y="280" text-anchor="middle" font-size="14" font-weight="500" fill="#7F1D1D">Customer web</text>
+<text x="128" y="300" text-anchor="middle" font-size="11" fill="#B54A4A">diners order by phone</text>
+<rect x="252" y="252" width="176" height="64" rx="8" fill="#FDECEC" stroke="#B91C1C" stroke-width="1.5"/>
+<text x="340" y="280" text-anchor="middle" font-size="14" font-weight="500" fill="#7F1D1D">Admin dashboard</text>
+<text x="340" y="300" text-anchor="middle" font-size="11" fill="#B54A4A">analytics + setup</text>
+<rect x="464" y="252" width="176" height="64" rx="8" fill="#FDECEC" stroke="#B91C1C" stroke-width="1.5"/>
+<text x="552" y="280" text-anchor="middle" font-size="14" font-weight="500" fill="#7F1D1D">Storefront kiosk</text>
+<text x="552" y="300" text-anchor="middle" font-size="11" fill="#B54A4A">staff order queue</text>
 </svg>
