@@ -4,6 +4,17 @@
 # ~1h buffer (defaulting to 9am-3pm ET when hours are unset). While stopped you pay
 # only for the EBS volume (~$1.60/mo) — no compute. The customer signup/OTP/rewards
 # APIs are down outside these hours (pilot/cost-pause; widen before real launch).
+#
+# ⚠️ LIVE DRIFT (HongShing demo box): the running schedule is PER-DAY and does not
+# match the single start/stop resources below. HongShing opens 11:30 daily except
+# Tue, closing 9pm (Sun/Mon/Wed/Thu) or 10pm (Fri/Sat), so the live setup is 3
+# EventBridge schedules managed via CLI (start ~30m before open, stop ~15m before close):
+#   hongshing-start      cron(0 11 ? * SUN,MON,WED,THU,FRI,SAT *)   startInstances
+#   hongshing-stop       cron(45 20 ? * SUN,MON,WED,THU *)          stopInstances
+#   hongshing-stop-late  cron(45 21 ? * FRI,SAT *)                  stopInstances   (NOT in TF state)
+# All America/Toronto. A `terraform apply` here would revert start/stop to the
+# single-cron vars and orphan hongshing-stop-late — re-apply the CLI schedules
+# afterward (see profiles/hongshing.yaml `hours:`), or `terraform import` stop-late first.
 resource "aws_iam_role" "scheduler" {
   count = var.enable_business_hours_schedule ? 1 : 0
   name  = "${var.slug}-scheduler-ec2"
