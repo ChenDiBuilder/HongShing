@@ -16,6 +16,11 @@ export interface LandingConfig {
   address?: string;
   contact_phone?: string;
   hours_display?: Record<string, string>;
+  // Server-computed open/closed state (evaluated in the restaurant's timezone) so
+  // the UI can show a "currently closed" banner that tracks real operating hours
+  // even while the box is up. Undefined when hours are unset/unparseable.
+  is_open?: boolean;
+  hours_today?: string;
   pickup_estimate?: string;
   tax_rate?: number;
   currency_symbol?: string;

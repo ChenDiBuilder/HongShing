@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { CartContext, createCartState } from "./context/CartContext";
 import { api } from "./context/api";
 import { Header, Footer } from "./components/Header";
+import { ClosedBanner } from "./components/ClosedBanner";
 import { HomePage } from "./pages/HomePage";
 import { MenuPage, ProductDetailPage } from "./pages/MenuPage";
 import { CartPage } from "./pages/CartPage";
@@ -167,7 +168,10 @@ export default function App() {
 
   const wrap = (children: React.ReactNode) => (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-3xl mx-auto p-4 mt-4">{children}</div>
+      <div className="max-w-3xl mx-auto p-4 mt-4">
+        <ClosedBanner config={config} />
+        {children}
+      </div>
       {footer}
     </div>
   );
@@ -176,12 +180,15 @@ export default function App() {
 
   if (page === "home") {
     content = (
-      <HomePage primaryColor={config.primary_color} logoUrl={config.logo_url}
-        secondaryColor={config.secondary_color} restaurantName={config.restaurant_name} tagline={config.tagline}
-        externalOrderingUrl={config.external_ordering_url} onExternalOrder={openExternalOrder}
-        campaign={config.campaign}
-        setPage={setPage} loadMenu={loadMenu}
-        onClaimReward={() => { returnPageRef.current = "reward"; setPage("landing"); }} />
+      <>
+        <div className="max-w-sm mx-auto px-4 pt-6"><ClosedBanner config={config} /></div>
+        <HomePage primaryColor={config.primary_color} logoUrl={config.logo_url}
+          secondaryColor={config.secondary_color} restaurantName={config.restaurant_name} tagline={config.tagline}
+          externalOrderingUrl={config.external_ordering_url} onExternalOrder={openExternalOrder}
+          campaign={config.campaign} isOpen={config.is_open}
+          setPage={setPage} loadMenu={loadMenu}
+          onClaimReward={() => { returnPageRef.current = "reward"; setPage("landing"); }} />
+      </>
     );
     content = <>{content}<Footer setPage={setPage} config={config} /></>;
   } else if (page === "landing") {
@@ -208,7 +215,7 @@ export default function App() {
   } else if (page === "product-detail" && selectedProduct) {
     content = <>{header}{wrap(<ProductDetailPage product={selectedProduct} setPage={setPage} primaryColor={config.primary_color} />)}</>;
   } else if (page === "cart") {
-    content = <>{header}{wrap(<CartPage primaryColor={config.primary_color} profile={profile} rewards={rewards} loadRewards={loadRewards} setPage={setPage} />)}</>;
+    content = <>{header}{wrap(<CartPage primaryColor={config.primary_color} profile={profile} rewards={rewards} loadRewards={loadRewards} setPage={setPage} isOpen={config.is_open} />)}</>;
   } else if (page === "order-confirmation" && orderConfirmation) {
     content = <>{header}{wrap(<OrderConfirmation order={orderConfirmation} primaryColor={config.primary_color} setPage={setPage} loadMenu={loadMenu} />)}</>;
   } else if (page === "order-tracking") {

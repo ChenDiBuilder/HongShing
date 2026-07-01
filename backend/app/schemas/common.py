@@ -84,6 +84,13 @@ class LandingConfigResponse(BaseModel):
     address: str | None = None
     contact_phone: str | None = None
     hours_display: dict[str, str] | None = None
+    # Server-computed open/closed state, evaluated in the restaurant's timezone so
+    # the SPA can show a "currently closed" banner that tracks real operating hours
+    # even while the box is up (it starts ~30m before open, stops ~15m before
+    # close). is_open is None when hours are unset/unparseable — the SPA then shows
+    # no closed state. hours_today is today's raw display string.
+    is_open: bool | None = None
+    hours_today: str | None = None
     pickup_estimate: str | None = None
     tax_rate: float | None = None
     currency_symbol: str | None = None

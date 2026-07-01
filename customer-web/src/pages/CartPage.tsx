@@ -9,6 +9,7 @@ interface Props {
   rewards?: UserReward[];
   loadRewards?: () => void;
   setPage: (p: any) => void;
+  isOpen?: boolean;
 }
 
 // Mirror of the backend reward_service.calculate_discount, for a live cart preview.
@@ -24,11 +25,12 @@ export function estimateDiscount(reward: UserReward | undefined, subtotalCents: 
   return 0;
 }
 
-function PlaceOrderButton({ primaryColor, profile, rewardId, onPlace }: { primaryColor: string; profile?: any; rewardId?: string; onPlace: () => void }) {
+function PlaceOrderButton({ primaryColor, profile, rewardId, onPlace, closed }: { primaryColor: string; profile?: any; rewardId?: string; onPlace: () => void; closed?: boolean }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   async function handleClick() {
+    if (closed) return;
     if (!profile) {
       window.dispatchEvent(new CustomEvent("signin-required"));
       return;
@@ -52,17 +54,19 @@ function PlaceOrderButton({ primaryColor, profile, rewardId, onPlace }: { primar
 
   return (
     <div className="space-y-2">
+      {closed && <p className="text-red-600 text-sm text-center bg-red-50 border border-red-200 rounded-xl py-2 font-medium">We're currently closed — ordering will reopen during business hours.</p>}
       {error && <p className="text-red-500 text-sm text-center bg-red-50 rounded-xl py-2">{error}</p>}
-      <button onClick={handleClick} disabled={loading}
-        className="w-full py-4 text-white font-bold rounded-2xl text-lg active:scale-[0.98] transition-transform disabled:opacity-50"
+      <button onClick={handleClick} disabled={loading || closed}
+        className="w-full py-4 text-white font-bold rounded-2xl text-lg active:scale-[0.98] transition-transform disabled:opacity-50 disabled:active:scale-100"
         style={{ backgroundColor: primaryColor }}>
-        {!profile ? "Sign in to Checkout" : loading ? "Placing order..." : "Place Order"}
+        {closed ? "Closed — Ordering Unavailable" : !profile ? "Sign in to Checkout" : loading ? "Placing order..." : "Place Order"}
       </button>
     </div>
   );
 }
 
-export function CartPage({ primaryColor, profile, rewards, loadRewards, setPage }: Props) {
+export function CartPage({ primaryColor, profile, rewards, loadRewards, setPage, isOpen }: Props) {
+  const closed = isOpen === false;
   const cart = useCart();
   interface CartItemData { item: any; quantity: number; cartItemId?: string; }
   const [guestName, setGuestName] = useState("");
@@ -161,7 +165,7 @@ export function CartPage({ primaryColor, profile, rewards, loadRewards, setPage 
 
       <div className="fixed bottom-0 left-0 right-0 px-3 pb-4 bg-white/80 backdrop-blur">
         <div className="max-w-3xl mx-auto space-y-2">
-          <PlaceOrderButton primaryColor={primaryColor} profile={profile} rewardId={activeReward?.id} onPlace={() => cart.clearCart()} />
+          <PlaceOrderButton primaryColor={primaryColor} profile={profile} rewardId={activeReward?.id} onPlace={() => cart.clearCart()} closed={closed} />
         </div>
       </div>
     </div>

@@ -9,6 +9,7 @@ interface Props {
   externalOrderingUrl?: string;
   onExternalOrder?: () => void;
   campaign?: { landing_headline?: string; landing_subtitle?: string } | null;
+  isOpen?: boolean;
   setPage: (p: any) => void;
   loadMenu: () => void;
   onClaimReward: () => void;
@@ -20,13 +21,16 @@ function todayHours() {
   return RESTAURANT_INFO.hours[today as keyof typeof RESTAURANT_INFO.hours] || "Hours unavailable";
 }
 
-export function HomePage({ primaryColor, logoUrl, secondaryColor, restaurantName, tagline, externalOrderingUrl, onExternalOrder, campaign, setPage, loadMenu, onClaimReward }: Props) {
+export function HomePage({ primaryColor, logoUrl, secondaryColor, restaurantName, tagline, externalOrderingUrl, onExternalOrder, campaign, isOpen, setPage, loadMenu, onClaimReward }: Props) {
   const headline = campaign?.landing_headline || "Order Pickup & Earn Rewards";
   // Campaign subtitle wins; otherwise the profile tagline (PRD-12 S3); otherwise neutral default.
   const subtitle = campaign?.landing_subtitle || tagline || "Browse our menu, order ahead, and claim exclusive rewards.";
   const hasHours = Object.keys(RESTAURANT_INFO.hours).length > 0;
   // Secondary brand colour accents the secondary CTA; falls back to primary.
   const accent = secondaryColor || primaryColor;
+  // Outside operating hours (server-computed), ordering is unavailable — browsing
+  // the menu still works. undefined (hours unknown) is treated as open.
+  const closed = isOpen === false;
 
   return (
     <div className="min-h-screen bg-white">
@@ -47,16 +51,16 @@ export function HomePage({ primaryColor, logoUrl, secondaryColor, restaurantName
         <div className="w-full max-w-sm space-y-3">
           {/* External ordering CTA — only when the restaurant configured a URL (PRD-12 S10). */}
           {externalOrderingUrl && onExternalOrder && (
-            <button onClick={onExternalOrder}
-              className="w-full py-4 text-white font-bold rounded-xl text-lg shadow-lg active:scale-[0.98] transition-transform"
+            <button onClick={onExternalOrder} disabled={closed}
+              className="w-full py-4 text-white font-bold rounded-xl text-lg shadow-lg active:scale-[0.98] transition-transform disabled:opacity-40 disabled:active:scale-100"
               style={{ backgroundColor: primaryColor }}>
               Order Online
             </button>
           )}
-          <button onClick={() => { loadMenu(); setPage("menu"); }}
-            className={`w-full py-4 font-bold rounded-xl text-lg active:scale-[0.98] transition-transform ${externalOrderingUrl ? "border-2" : "text-white shadow-lg"}`}
+          <button onClick={() => { if (closed) return; loadMenu(); setPage("menu"); }} disabled={closed}
+            className={`w-full py-4 font-bold rounded-xl text-lg active:scale-[0.98] transition-transform disabled:opacity-40 disabled:active:scale-100 ${externalOrderingUrl ? "border-2" : "text-white shadow-lg"}`}
             style={externalOrderingUrl ? { borderColor: accent, color: accent } : { backgroundColor: primaryColor }}>
-            Order Pickup
+            {closed ? "Ordering Closed" : "Order Pickup"}
           </button>
           <button onClick={() => { loadMenu(); setPage("menu"); }}
             className="w-full py-4 font-bold rounded-xl text-lg border-2 active:scale-[0.98] transition-transform"

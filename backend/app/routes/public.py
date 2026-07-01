@@ -6,6 +6,7 @@ from sqlalchemy import select
 from app.database import AsyncSession, get_db
 from app.models import QRCampaign, RestaurantSettings
 from app.schemas.common import APIResponse, CampaignConfig, LandingConfigResponse
+from app.services.hours import compute_open_status
 
 router = APIRouter()
 
@@ -57,6 +58,11 @@ async def landing_config(source: str | None = None, db: AsyncSession = Depends(g
         langs = [s.strip() for s in settings.languages.split(",") if s.strip()]
         languages = langs or None
 
+    # Open/closed is computed server-side in the restaurant's timezone so the SPA's
+    # "currently closed" banner tracks real operating hours even while the box is
+    # up (it starts ~30m before open, stops ~15m before close).
+    is_open, hours_today = compute_open_status(hours_display, settings.timezone)
+
     return LandingConfigResponse(
         restaurant_name=settings.restaurant_name,
         primary_color=settings.primary_color,
@@ -70,6 +76,8 @@ async def landing_config(source: str | None = None, db: AsyncSession = Depends(g
         address=settings.address,
         contact_phone=settings.contact_phone,
         hours_display=hours_display,
+        is_open=is_open,
+        hours_today=hours_today,
         pickup_estimate=settings.pickup_estimate,
         tax_rate=settings.tax_rate,
         currency_symbol=settings.currency_symbol,
