@@ -88,26 +88,93 @@ def _alembic_adopt_legacy() -> None:
     command.upgrade(cfg, "head")
 
 
+def _known_revision_ids() -> set[str]:
+    """All revision ids present in the migration scripts."""
+    from alembic.script import ScriptDirectory
+
+    return {rev.revision for rev in ScriptDirectory.from_config(_alembic_config()).walk_revisions()}
+
+
+def _alembic_stamp_head() -> None:
+    """Overwrite the version table with head, purging any stale/orphan entry."""
+    from alembic import command
+
+    command.stamp(_alembic_config(), "head", purge=True)
+
+
+async def _recover_orphan_alembic_version(orphans: list[str]) -> None:
+    """Heal — or fail loudly on — an alembic_version that points at a revision no
+    longer present in the migration scripts (history squashed/rewritten).
+
+    Left unhandled, `upgrade head` fails deep in Alembic with "Can't locate
+    revision" and uvicorn never binds — a silent wedge that reads as a hang.
+    Production never auto-repairs real data. In non-production, if the live schema
+    already matches the ORM models the marker is merely stale, so we re-stamp to head
+    and boot; if the schema also differs, we fail clearly (recreate the local DB)."""
+    detail = (
+        f"alembic_version points at unknown revision(s) {orphans}: the migration "
+        f"history was rewritten but this database still references an old id."
+    )
+    if settings.app_env == "production":
+        raise RuntimeError(
+            detail + " Refusing to auto-repair production data — run "
+            "`alembic stamp <correct_revision>` for the true schema state."
+        )
+
+    from alembic.autogenerate import compare_metadata
+    from alembic.migration import MigrationContext
+    import app.models  # noqa: F401  (register every table on Base.metadata)
+    from app.database import Base
+
+    async with engine.connect() as conn:
+        diffs = await conn.run_sync(
+            lambda c: compare_metadata(MigrationContext.configure(c), Base.metadata)
+        )
+    if diffs:
+        raise RuntimeError(
+            detail + f" The live schema also differs from the models ({len(diffs)} "
+            "change(s)); it cannot be safely re-stamped. Recreate the local database "
+            "(dropdb/createdb) and restart to rebuild it from migrations."
+        )
+    log.warning("%s Schema matches the models — re-stamping to head.", detail)
+    await asyncio.to_thread(_alembic_stamp_head)
+
+
 async def _run_migrations() -> None:
     """Bring the schema to Alembic head on startup (single-box self-bootstrap).
 
     - Fresh database (no schema): `upgrade head` builds everything.
     - Legacy create_all database (schema present, no alembic_version): stamp the
       baseline then upgrade, so post-baseline migrations still apply.
+    - Orphan alembic_version (stored revision no longer in the scripts): recover
+      instead of wedging (see `_recover_orphan_alembic_version`).
     - Already under Alembic: `upgrade head` applies new migrations.
 
     Errors are deliberately NOT swallowed — a failed migration must surface."""
-    from sqlalchemy import inspect
+    from sqlalchemy import inspect, text
 
     async with engine.connect() as conn:
         has_schema = await conn.run_sync(lambda c: inspect(c).has_table("users"))
         has_version = await conn.run_sync(lambda c: inspect(c).has_table("alembic_version"))
+        stored_revs: list[str] = []
+        if has_version:
+            stored_revs = list(
+                (await conn.execute(text("SELECT version_num FROM alembic_version"))).scalars()
+            )
 
     if has_schema and not has_version:
         log.info("Existing schema without alembic_version — adopting (stamp baseline + upgrade).")
         await asyncio.to_thread(_alembic_adopt_legacy)
-    else:
-        await asyncio.to_thread(_alembic_upgrade_head)
+        return
+
+    if stored_revs:
+        known = await asyncio.to_thread(_known_revision_ids)
+        orphans = [r for r in stored_revs if r not in known]
+        if orphans:
+            await _recover_orphan_alembic_version(orphans)
+            return
+
+    await asyncio.to_thread(_alembic_upgrade_head)
 
 
 @asynccontextmanager
