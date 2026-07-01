@@ -1,4 +1,4 @@
-import { createContext, useState, useCallback, useContext, useEffect, useRef } from "react";
+import { createContext, useState, useCallback, useContext, useEffect, useRef, useMemo } from "react";
 import type { CartItem, CartContextType, MenuItemType } from "../types";
 import { api } from "./api";
 
@@ -94,7 +94,15 @@ export function createCartState(profile: any, onLoadCart?: () => void) {
 
   const clearCart = useCallback(() => setItems([]), []);
 
-  return { items, addItem, removeItem, updateQuantity, clearCart, subtotalCents, itemCount, loadCart };
+  // Memoize the context value so a parent re-render (e.g. the menu scroll-spy
+  // updating activeCategory in App) doesn't hand every useCart() consumer a new
+  // object identity and re-render all ~78 menu rows on each scroll tick. The
+  // callbacks are already useCallback-stable; subtotalCents/itemCount derive from
+  // items, so [items] covers them.
+  return useMemo(
+    () => ({ items, addItem, removeItem, updateQuantity, clearCart, subtotalCents, itemCount, loadCart }),
+    [items, addItem, removeItem, updateQuantity, clearCart, loadCart]
+  );
 }
 
 export function useCart() {
