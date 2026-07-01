@@ -6,15 +6,17 @@
 # APIs are down outside these hours (pilot/cost-pause; widen before real launch).
 #
 # ⚠️ LIVE DRIFT (HongShing demo box): the running schedule is PER-DAY and does not
-# match the single start/stop resources below. HongShing opens 11:30 daily except
-# Tue, closing 9pm (Sun/Mon/Wed/Thu) or 10pm (Fri/Sat), so the live setup is 3
-# EventBridge schedules managed via CLI (start ~30m before open, stop ~15m before close):
-#   hongshing-start      cron(0 11 ? * SUN,MON,WED,THU,FRI,SAT *)   startInstances
-#   hongshing-stop       cron(45 20 ? * SUN,MON,WED,THU *)          stopInstances
-#   hongshing-stop-late  cron(45 21 ? * FRI,SAT *)                  stopInstances   (NOT in TF state)
-# All America/Toronto. A `terraform apply` here would revert start/stop to the
-# single-cron vars and orphan hongshing-stop-late — re-apply the CLI schedules
-# afterward (see profiles/hongshing.yaml `hours:`), or `terraform import` stop-late first.
+# match the single start/stop resources below. Real hours (per Google, open daily):
+# 11am-11pm Mon-Thu, 11am-midnight Fri, 3pm-midnight Sat, 3pm-11pm Sun. So the live
+# setup is 4 EventBridge schedules managed via CLI (start ~30m before open, stop ~15m
+# before close, America/Toronto):
+#   hongshing-start       cron(30 10 ? * MON,TUE,WED,THU,FRI *)   startInstances  (10:30)
+#   hongshing-start-late  cron(30 14 ? * SAT,SUN *)               startInstances  (14:30)  (NOT in TF state)
+#   hongshing-stop        cron(45 22 ? * MON,TUE,WED,THU,SUN *)   stopInstances   (22:45)
+#   hongshing-stop-late   cron(45 23 ? * FRI,SAT *)               stopInstances   (23:45)  (NOT in TF state)
+# A `terraform apply` here would revert start/stop to the single-cron vars and orphan
+# the two *-late schedules — re-apply the CLI schedules afterward (see
+# profiles/hongshing.yaml `hours:`), or `terraform import` the *-late ones first.
 resource "aws_iam_role" "scheduler" {
   count = var.enable_business_hours_schedule ? 1 : 0
   name  = "${var.slug}-scheduler-ec2"

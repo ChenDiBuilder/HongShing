@@ -70,29 +70,31 @@ location:                           # customer-facing storefront display (PRD-12
   address: "195 Dundas St W, Toronto, ON M5G 1C7"
   phone: "+14169773338"             # main restaurant line (home-page tel: link)
   pickup_estimate: "20–30 minutes"
-  hours_display:
-    Mon: "11:30 AM – 9:00 PM"
-    Tue: "Closed"
-    Wed: "11:30 AM – 9:00 PM"
-    Thu: "11:30 AM – 9:00 PM"
-    Fri: "11:30 AM – 10:00 PM"
-    Sat: "11:30 AM – 10:00 PM"
-    Sun: "11:30 AM – 9:00 PM"
+  hours_display:                    # real hours per Google (open daily)
+    Mon: "11:00 AM – 11:00 PM"
+    Tue: "11:00 AM – 11:00 PM"
+    Wed: "11:00 AM – 11:00 PM"
+    Thu: "11:00 AM – 11:00 PM"
+    Fri: "11:00 AM – 12:00 AM"
+    Sat: "3:00 PM – 12:00 AM"
+    Sun: "3:00 PM – 11:00 PM"
 
 pricing:
   tax_rate: 0.13                    # Ontario HST
   currency_symbol: "$"
 
 hours:                              # single-cron fallback for provision-restaurant.sh
-  open: "11:30"                     # matches location.hours_display open time
-  close: "22:00"                    # latest close across the week (Fri/Sat)
+  open: "11:00"                     # earliest open (weekdays; weekend opens 3pm)
+  close: "23:00"                    # typical close (Fri/Sat run to midnight)
   # NOTE: HongShing's live schedule is PER-DAY and does not fit the single
-  # open/close cron this block generates (stop differs 20:45 vs 21:45, closed Tue).
-  # The live EventBridge Scheduler is managed out-of-band via CLI — 3 schedules:
-  #   hongshing-start      cron(0 11 ? * SUN,MON,WED,THU,FRI,SAT *)  (30m before 11:30 open, excl. Tue)
-  #   hongshing-stop       cron(45 20 ? * SUN,MON,WED,THU *)         (15m before 9pm close)
-  #   hongshing-stop-late  cron(45 21 ? * FRI,SAT *)                 (15m before 10pm close)
-  # All America/Toronto (DST-aware). See infra-ec2/schedule.tf header.
+  # open/close cron this block generates (open 11am wkdays / 3pm wknd; close 11pm,
+  # or midnight Fri/Sat). The live EventBridge Scheduler is managed out-of-band via
+  # CLI — 4 schedules (start 30m before open, stop 15m before close, America/Toronto):
+  #   hongshing-start       cron(30 10 ? * MON,TUE,WED,THU,FRI *)   (10:30, open 11am)
+  #   hongshing-start-late  cron(30 14 ? * SAT,SUN *)               (14:30, open 3pm)
+  #   hongshing-stop        cron(45 22 ? * MON,TUE,WED,THU,SUN *)   (22:45, close 11pm)
+  #   hongshing-stop-late   cron(45 23 ? * FRI,SAT *)               (23:45, close midnight)
+  # See infra-ec2/schedule.tf header.
 
 owner:
   email: "daniel.chen@bridgewayinnovations.ca"   # demo admin; add the restaurant owner's account at cutover
