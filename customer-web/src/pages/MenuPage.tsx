@@ -59,7 +59,7 @@ function PopularBanner({ popular, primaryColor, setSelectedProduct, setPage }: {
             className="flex-shrink-0 w-36 bg-white rounded-2xl shadow-sm border border-gray-100 p-3 text-left active:scale-[0.98] transition-transform">
             <div className="w-full h-24 bg-gray-100 rounded-xl mb-2 flex items-center justify-center text-2xl overflow-hidden">
               {item.image_url
-                ? <img src={item.image_url} alt={item.name} className="w-full h-full object-cover rounded-xl" />
+                ? <img src={item.image_url} alt={item.name} width={144} height={96} loading="lazy" decoding="async" className="w-full h-full object-cover rounded-xl" />
                 : <span className="text-2xl">🍽️</span>}
             </div>
             <p className="text-sm font-semibold text-gray-800 truncate">{item.name}</p>
@@ -76,12 +76,18 @@ export function MenuPage({ menu, activeCategory, setActiveCategory, setSelectedP
   setSelectedProduct: (item: MenuItemType) => void; setPage: (p: any) => void; primaryColor: string;
 }) {
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  // When the user taps a category chip we scroll programmatically; suppress the
+  // scroll-spy observer briefly so it doesn't fight the animation or flicker the
+  // highlighted chip through intermediate categories on the way there.
+  const programmaticScrollUntil = useRef(0);
   const [search, setSearch] = useState("");
 
   useEffect(() => {
     if (menu.length === 0) return;
     const observer = new IntersectionObserver(
       (entries) => {
+        // Ignore observer updates while a tap-driven smooth scroll is animating.
+        if (Date.now() < programmaticScrollUntil.current) return;
         for (const entry of entries) {
           if (entry.isIntersecting) {
             const slug = entry.target.getAttribute("data-slug");
@@ -97,12 +103,6 @@ export function MenuPage({ menu, activeCategory, setActiveCategory, setSelectedP
     }
     return () => observer.disconnect();
   }, [menu, setActiveCategory]);
-
-  useEffect(() => {
-    if (activeCategory && sectionRefs.current[activeCategory]) {
-      sectionRefs.current[activeCategory]!.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  }, [activeCategory]);
 
   const allItems: MenuItemType[] = menu.flatMap((c: any) => c.items || []);
   const popular = allItems.filter((i) => i.popular);
@@ -180,7 +180,13 @@ export function MenuPage({ menu, activeCategory, setActiveCategory, setSelectedP
           <div className="flex gap-2 overflow-x-auto hide-scrollbar">
             {menu.map((cat: any) => (
               <button key={cat.slug}
-                onClick={() => setActiveCategory(cat.slug)}
+                onClick={() => {
+                  // Tap-to-jump: scroll here only on an explicit tap, and suppress
+                  // the observer while it animates so it can't fight the scroll.
+                  programmaticScrollUntil.current = Date.now() + 700;
+                  setActiveCategory(cat.slug);
+                  sectionRefs.current[cat.slug]?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }}
                 className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex-shrink-0 ${activeCategory === cat.slug ? "text-white" : "bg-white text-gray-600 border border-gray-200"}`}
                 style={activeCategory === cat.slug ? { backgroundColor: primaryColor } : {}}>
                 <span>{categoryEmoji(cat.slug)}</span>
@@ -205,7 +211,7 @@ export function MenuPage({ menu, activeCategory, setActiveCategory, setSelectedP
                   className="w-full flex items-center gap-3 bg-white rounded-2xl p-3 shadow-sm border border-gray-100 text-left active:scale-[0.99] transition-transform">
                   <div className="w-16 h-16 bg-gray-100 rounded-xl flex-shrink-0 flex items-center justify-center text-xl overflow-hidden">
                     {item.image_url
-                      ? <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+                      ? <img src={item.image_url} alt={item.name} width={64} height={64} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                       : <span className="text-xl">🍽️</span>}
                   </div>
                   <div className="flex-1 min-w-0">
