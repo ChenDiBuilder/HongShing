@@ -59,16 +59,38 @@ const prettyPhone = (e164: string | null) => {
   return d.length === 10 ? `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}` : e164;
 };
 
+/** Demo controls are off unless the tablet is opened with ?demo=1.
+ *  Real staff must never see a button that fakes a phone call. */
+const demoMode = new URLSearchParams(window.location.search).get("demo") === "1";
+
 export function FrontDesk() {
   const [digits, setDigits] = useState("");
   const [result, setResult] = useState<Lookup | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The number currently on the line. Set by an incoming call; null when the
+  // handset is down and staff are just looking someone up by hand.
+  const [onCall, setOnCall] = useState<string | null>(null);
+  const [demoNumber, setDemoNumber] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
+
+  /** A call arrived. Today the trigger is the demo control; when a carrier is
+   *  connected it will be a caller-ID event, and nothing below changes. */
+  const ringIn = useCallback((raw: string) => {
+    setOnCall(raw);
+    setDigits(raw);
+  }, []);
+
+  function endCall() {
+    setOnCall(null);
+    setDigits("");
+    setResult(null);
+    inputRef.current?.focus();
+  }
 
   const lookup = useCallback(async (raw: string) => {
     if (raw.replace(/\D/g, "").length < 10) return;
@@ -92,12 +114,17 @@ export function FrontDesk() {
   // find a button while someone is talking to them.
   useEffect(() => {
     const d = digits.replace(/\D/g, "");
-    if (d.length === 10 || d.length === 11) {
-      const t = setTimeout(() => lookup(digits), 150);
-      return () => clearTimeout(t);
-    }
-    if (d.length === 0) setResult(null);
+    if (d.length !== 10 && d.length !== 11) return;
+    const t = setTimeout(() => lookup(digits), 150);
+    return () => clearTimeout(t);
   }, [digits, lookup]);
+
+  function onDigitsChange(value: string) {
+    setDigits(value);
+    // Emptying the box clears the card. Done here rather than in the effect so
+    // we never set state during render.
+    if (value.replace(/\D/g, "").length === 0) setResult(null);
+  }
 
   function clear() {
     setDigits("");
@@ -108,6 +135,53 @@ export function FrontDesk() {
 
   return (
     <div className="p-4 max-w-5xl mx-auto">
+      {/* On the line — the screen reacts before staff say hello */}
+      {onCall && (
+        <div className="bg-emerald-600 text-white rounded-lg shadow-lg p-4 mb-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="relative flex h-3 w-3 shrink-0" aria-hidden="true">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-white" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-xs uppercase tracking-wide text-emerald-100">Incoming call</p>
+              <p className="text-2xl font-mono font-bold truncate">
+                {prettyPhone(result?.phone ?? null) || onCall}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={endCall}
+            className="min-h-[44px] px-4 rounded bg-emerald-800 hover:bg-emerald-900 text-white text-base shrink-0"
+          >
+            End call
+          </button>
+        </div>
+      )}
+
+      {/* Demo-only: stand in for a caller-ID event until a carrier is connected */}
+      {demoMode && !onCall && (
+        <div className="bg-gray-900 text-gray-200 rounded-lg p-3 mb-4 flex flex-wrap items-center gap-2">
+          <span className="text-xs uppercase tracking-wide text-gray-400 mr-1">Demo</span>
+          <input
+            value={demoNumber}
+            onChange={(e) => setDemoNumber(e.target.value)}
+            placeholder="number to ring"
+            inputMode="tel"
+            className="min-h-[40px] px-3 rounded bg-gray-800 border border-gray-700 font-mono text-sm text-white placeholder-gray-500 focus:outline-none focus:border-gray-500"
+          />
+          <button
+            onClick={() => demoNumber && ringIn(demoNumber)}
+            className="min-h-[40px] px-3 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-sm"
+          >
+            Ring it
+          </button>
+          <span className="text-xs text-gray-500">
+            stands in for caller ID until a line is connected
+          </span>
+        </div>
+      )}
+
       {/* Lookup bar */}
       <div className="bg-white rounded-lg shadow p-4 mb-4">
         <label htmlFor="fd-phone" className="block text-sm font-medium text-gray-600 mb-2">
@@ -118,7 +192,7 @@ export function FrontDesk() {
             id="fd-phone"
             ref={inputRef}
             value={digits}
-            onChange={(e) => setDigits(e.target.value)}
+            onChange={(e) => onDigitsChange(e.target.value)}
             inputMode="tel"
             autoComplete="off"
             placeholder="416-977-3338"
