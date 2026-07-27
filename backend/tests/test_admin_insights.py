@@ -411,6 +411,40 @@ class TestSendReminder:
         assert r.status_code == 400
         assert sent == []
 
+    async def test_cooldown_stops_a_second_reminder_within_three_days(
+        self, client, db_session, owner, settings_row, template, monkeypatch
+    ):
+        """A double-click, a retry, or two staff on the tablet the same morning
+        must not text the same holder twice."""
+        sent: list[tuple[str, str]] = []
+        monkeypatch.setattr(
+            "app.services.sms_service.send_sms", lambda phone, body: sent.append((phone, body))
+        )
+        now = datetime.now(timezone.utc)
+        u = await _customer_with_orders(db_session, "+14165550010", "Eli", [5])
+        db_session.add(UserNotificationPreference(user_id=u.id, sms_marketing_opt_in=True))
+        rw = Reward(
+            user_id=u.id, reward_template_id=template.id, code="HS-COOLDWN",
+            status="issued", expires_at=now + timedelta(days=2),
+        )
+        db_session.add(rw)
+        await db_session.commit()
+
+        _admin(client, owner)
+        body = {
+            "insight_key": "expiring_rewards",
+            "action_type": "send_reminder",
+            "reward_ids": [rw.id],
+        }
+        first = await client.post(ACT, json=body)
+        assert first.status_code == 200, first.text
+        assert first.json()["data"]["sms_sent"] == 1
+
+        second = await client.post(ACT, json=body)
+        assert second.status_code == 400
+        assert "already reminded" in second.json()["detail"]
+        assert len(sent) == 1
+
 
 class TestOutcomes:
     async def test_revenue_attributes_back_to_the_decision(

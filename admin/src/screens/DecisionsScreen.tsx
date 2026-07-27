@@ -81,7 +81,7 @@ interface InsightsData {
   actions: PastAction[];
 }
 
-interface ActResult { targeted: number; rewards_issued: number; already_had: number; sms_sent: number; sms_skipped: number; }
+interface ActResult { targeted: number; rewards_issued: number; already_had: number; sms_sent: number; sms_skipped: number; already_reminded?: number; }
 
 const PRIORITY: Record<Card["priority"], { label: string; chip: string; border: string }> = {
   act_now: { label: "Act now", chip: "bg-red-100 text-red-700", border: "border-l-red-500" },
@@ -443,7 +443,9 @@ function DecisionCard(props: CardProps) {
             ? `${receipt.rewards_issued} reward${receipt.rewards_issued !== 1 ? "s" : ""} issued · ${receipt.sms_sent} texted` +
               (receipt.already_had ? ` · ${receipt.already_had} already had one` : "") +
               (receipt.sms_skipped ? ` · ${receipt.sms_skipped} not texted ${smsConfigured ? "(no consent)" : "(texting off)"}` : "")
-            : `${receipt.sms_sent} texted` + (receipt.sms_skipped ? ` · ${receipt.sms_skipped} skipped ${smsConfigured ? "(no consent)" : "(texting off)"}` : "")}
+            : `${receipt.sms_sent} texted` +
+              (receipt.sms_skipped ? ` · ${receipt.sms_skipped} skipped ${smsConfigured ? "(no consent)" : "(texting off)"}` : "") +
+              (receipt.already_reminded ? ` · ${receipt.already_reminded} reminded recently, left alone` : "")}
           <span className="block text-xs text-green-700 mt-1">Watch "What you've acted on" below — returns attribute back here automatically.</span>
         </div>
       ) : card.action && (

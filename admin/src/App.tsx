@@ -56,6 +56,19 @@ export default function App() {
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [ordersFilter, setOrdersFilter] = useState("");
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [restoring, setRestoring] = useState(true);
+
+  // A dev-server reload (or a plain refresh) shouldn't dump an authed session
+  // back at the login form — the cookie is still valid; use it.
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch(`${apiBase}/api/admin/dashboard`, { credentials: "include" });
+        if (r.ok) setPage("dashboard");
+      } catch { /* not signed in — stay on login */ }
+      setRestoring(false);
+    })();
+  }, []);
 
   const showToast = useCallback((message: string, type: "success" | "error" = "success") => { setToast({ message, type }); }, []);
 
@@ -109,6 +122,13 @@ export default function App() {
   }
 
   if (page === "login") {
+    if (restoring) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-100">
+          <Spinner label="Checking session..." />
+        </div>
+      );
+    }
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
         <div className="w-full max-w-sm bg-white rounded-xl shadow-md p-8">

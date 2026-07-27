@@ -3,7 +3,7 @@
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select, text
+from sqlalchemy import select, text, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.database import AsyncSession, get_db
@@ -122,6 +122,25 @@ async def claim_reward(
 
     if not template:
         raise HTTPException(status_code=400, detail="No active reward available")
+
+    # Retire any expired-but-still-'issued' reward first. Nothing else ever
+    # flips a reward off 'issued' when its expiry passes, and both the
+    # existing-claim check below and the partial unique index match on status
+    # alone — so without this, a customer whose old reward died unredeemed
+    # would get the dead reward handed back forever instead of a fresh one.
+    # (Matches the index's documented intent in models/reward.py: "A
+    # redeemed/expired reward does not block a future re-issue.")
+    await db.execute(
+        update(Reward)
+        .where(
+            Reward.user_id == current_user.id,
+            Reward.reward_template_id == template.id,
+            Reward.status == "issued",
+            Reward.expires_at.isnot(None),
+            Reward.expires_at < datetime.now(timezone.utc),
+        )
+        .values(status="expired")
+    )
 
     # Check user hasn't already claimed this template
     result = await db.execute(

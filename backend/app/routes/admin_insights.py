@@ -70,6 +70,28 @@ _ACTIONABLE_INSIGHTS = {
     "expiring_rewards": "send_reminder",
 }
 
+# A reward holder is never texted "expires soon" twice inside this window —
+# a double-click, a retry, or two people running the tablet the same morning
+# must not become two texts.
+_REMINDER_COOLDOWN_DAYS = 3
+
+
+async def _recently_reminded_reward_ids(db: AsyncSession, now: datetime) -> set[str]:
+    actions = (
+        (
+            await db.execute(
+                select(InsightAction.params).where(
+                    InsightAction.action_type == "send_reminder",
+                    InsightAction.created_at
+                    > now - timedelta(days=_REMINDER_COOLDOWN_DAYS),
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return {rid for p in actions for rid in (p or {}).get("reward_ids", [])}
+
 
 # --------------------------------------------------------------------------
 # Assembly helpers — rows out of the DB, shaped for the pure layer.
@@ -654,6 +676,7 @@ async def act_on_insight(
 
     source_code = f"dec-{secrets.token_hex(4)}"
     queued_sms: list[tuple[str, str]] = []  # (phone, body) — sent only after commit
+    already_reminded = 0  # reminder-branch cooldown skips; 0 for offers
 
     if body.action_type == "send_offer":
         if not body.template_id or not body.user_ids:
@@ -817,8 +840,18 @@ async def act_on_insight(
                 )
             )
         ).all()
+
+        cooling = await _recently_reminded_reward_ids(db, now)
+        already_reminded = sum(1 for r, _ in rows if r.id in cooling)
+        rows = [(r, u) for r, u in rows if r.id not in cooling]
         if not rows:
-            raise HTTPException(status_code=400, detail="No live rewards to remind about")
+            detail = (
+                "Everyone here was already reminded in the last "
+                f"{_REMINDER_COOLDOWN_DAYS} days"
+                if already_reminded
+                else "No live rewards to remind about"
+            )
+            raise HTTPException(status_code=400, detail=detail)
 
         prefs_rows = (
             await db.execute(
@@ -887,5 +920,6 @@ async def act_on_insight(
             "already_had": action.already_had,
             "sms_sent": action.sms_sent,
             "sms_skipped": action.sms_skipped,
+            "already_reminded": already_reminded,
         }
     }
