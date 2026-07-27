@@ -26,6 +26,7 @@ from app.routes import (
 from app.routes.menu import router as menu_router
 from app.routes.orders import router as orders_router
 from app.routes.storefront_auth import router as storefront_auth_router
+from app.routes.storefront_customers import router as storefront_customers_router
 from app.routes.storefront_orders import router as storefront_orders_router
 from app.routes.storefront_reservations import router as storefront_reservations_router
 from app.routes.admin_devices import router as admin_devices_router
@@ -243,6 +244,7 @@ app.include_router(orders_router)
 
 # Storefront
 app.include_router(storefront_auth_router)
+app.include_router(storefront_customers_router)
 app.include_router(storefront_orders_router)
 app.include_router(storefront_reservations_router)
 
