@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import DecisionsScreen from "./screens/DecisionsScreen";
 import QRCampaignsScreen from "./screens/QRCampaignsScreen";
 import RewardsScreen from "./screens/RewardsScreen";
 import CustomersScreen from "./screens/CustomersScreen";
@@ -8,7 +9,7 @@ import ReservationSlotsScreen from "./screens/ReservationSlotsScreen";
 import OrdersScreen from "./screens/OrdersScreen";
 import { AnalyticsPanel } from "./components/AnalyticsPanel";
 
-type Page = "login" | "change-password" | "dashboard" | "qr-campaigns" | "rewards" | "customers" | "orders" | "settings" | "devices" | "reservation-slots";
+type Page = "login" | "change-password" | "dashboard" | "decisions" | "qr-campaigns" | "rewards" | "customers" | "orders" | "settings" | "devices" | "reservation-slots";
 
 const apiBase = import.meta.env.VITE_API_BASE ?? "";
 
@@ -141,6 +142,7 @@ export default function App() {
 
   const navItems: { key: Page; label: string }[] = [
     { key: "dashboard", label: "Dashboard" },
+    { key: "decisions", label: "This Week" },
     { key: "customers", label: "Customer Profiles" },
     { key: "orders", label: "Order History" },
     { key: "qr-campaigns", label: "QR & Campaigns" },
@@ -193,6 +195,7 @@ export default function App() {
             )}
           </div>
         )}
+        {page === "decisions" && <DecisionsScreen showToast={showToast} />}
         {page === "customers" && <CustomersScreen selectedCustomerId={selectedCustomerId} />}
         {page === "orders" && <OrdersScreen statusFilter={ordersFilter} onViewCustomer={handleViewCustomer} />}
         {page === "qr-campaigns" && <QRCampaignsScreen showToast={showToast} />}
