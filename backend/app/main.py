@@ -188,7 +188,12 @@ async def lifespan(app: FastAPI):
 
     _check_sms_capability()
 
-    yield
+    # Starlette never runs a mounted sub-app's lifespan, so the MCP session
+    # manager must be driven from here or every /mcp request 500s.
+    from app.mcp_server import mcp_lifespan
+
+    async with mcp_lifespan():
+        yield
     await engine.dispose()
 
 
@@ -262,6 +267,12 @@ app.include_router(reservations_router)
 
 # Cart (customer)
 app.include_router(cart_router)
+
+# Agent tool surface (Act 2): the restaurant as an MCP server. Token-gated;
+# 404s when MCP_SERVICE_TOKEN is unset.
+from app.mcp_server import build_mcp_asgi  # noqa: E402
+
+app.mount("/mcp", build_mcp_asgi())
 
 
 @app.get("/api/health")
