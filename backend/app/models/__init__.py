@@ -14,6 +14,7 @@ from app.models.order import Order, OrderItem, OrderStatusEvent
 from app.models.device import Device
 from app.models.reservation import Reservation, ReservationSlot
 from app.models.cart import Cart, CartItem
+from app.models.insight import InsightAction
 
 __all__ = [
     "Base",
@@ -44,4 +45,5 @@ __all__ = [
     "ReservationSlot",
     "Cart",
     "CartItem",
+    "InsightAction",
 ]

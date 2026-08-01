@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import DecisionsScreen from "./screens/DecisionsScreen";
 import QRCampaignsScreen from "./screens/QRCampaignsScreen";
 import RewardsScreen from "./screens/RewardsScreen";
 import CustomersScreen from "./screens/CustomersScreen";
@@ -8,7 +9,7 @@ import ReservationSlotsScreen from "./screens/ReservationSlotsScreen";
 import OrdersScreen from "./screens/OrdersScreen";
 import { AnalyticsPanel } from "./components/AnalyticsPanel";
 
-type Page = "login" | "change-password" | "dashboard" | "qr-campaigns" | "rewards" | "customers" | "orders" | "settings" | "devices" | "reservation-slots";
+type Page = "login" | "change-password" | "dashboard" | "decisions" | "qr-campaigns" | "rewards" | "customers" | "orders" | "settings" | "devices" | "reservation-slots";
 
 const apiBase = import.meta.env.VITE_API_BASE ?? "";
 
@@ -55,6 +56,19 @@ export default function App() {
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [ordersFilter, setOrdersFilter] = useState("");
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [restoring, setRestoring] = useState(true);
+
+  // A dev-server reload (or a plain refresh) shouldn't dump an authed session
+  // back at the login form — the cookie is still valid; use it.
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch(`${apiBase}/api/admin/dashboard`, { credentials: "include" });
+        if (r.ok) setPage("dashboard");
+      } catch { /* not signed in — stay on login */ }
+      setRestoring(false);
+    })();
+  }, []);
 
   const showToast = useCallback((message: string, type: "success" | "error" = "success") => { setToast({ message, type }); }, []);
 
@@ -108,6 +122,13 @@ export default function App() {
   }
 
   if (page === "login") {
+    if (restoring) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-100">
+          <Spinner label="Checking session..." />
+        </div>
+      );
+    }
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
         <div className="w-full max-w-sm bg-white rounded-xl shadow-md p-8">
@@ -141,6 +162,7 @@ export default function App() {
 
   const navItems: { key: Page; label: string }[] = [
     { key: "dashboard", label: "Dashboard" },
+    { key: "decisions", label: "This Week" },
     { key: "customers", label: "Customer Profiles" },
     { key: "orders", label: "Order History" },
     { key: "qr-campaigns", label: "QR & Campaigns" },
@@ -193,6 +215,7 @@ export default function App() {
             )}
           </div>
         )}
+        {page === "decisions" && <DecisionsScreen showToast={showToast} />}
         {page === "customers" && <CustomersScreen selectedCustomerId={selectedCustomerId} />}
         {page === "orders" && <OrdersScreen statusFilter={ordersFilter} onViewCustomer={handleViewCustomer} />}
         {page === "qr-campaigns" && <QRCampaignsScreen showToast={showToast} />}

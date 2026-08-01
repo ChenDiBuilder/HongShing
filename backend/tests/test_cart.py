@@ -114,3 +114,40 @@ class TestRewardBranding:
         assert data["reward"]["code"].startswith("YUM-")
         assert "hongshing" not in (data.get("short_link") or "")
         assert (data.get("short_link") or "").startswith("https://yum.test/r/")
+
+
+class TestReclaimAfterExpiry:
+    async def test_expired_reward_does_not_block_a_fresh_claim(
+        self, client, db_session, customer_user
+    ):
+        """Nothing ever flips a dead reward off status='issued', so without the
+        retire-first step the claim flow hands the expired reward back forever
+        and the partial unique index blocks a re-issue."""
+        template = RewardTemplate(name="Comeback", reward_type="fixed", reward_value=500)
+        db_session.add(template)
+        await db_session.flush()
+        db_session.add(RestaurantSettings(default_reward_template_id=template.id))
+        db_session.add(
+            Reward(
+                user_id=customer_user.id,
+                reward_template_id=template.id,
+                code="HS-OLDDEAD",
+                status="issued",
+                expires_at=datetime.now(timezone.utc) - timedelta(days=5),
+            )
+        )
+        await db_session.flush()
+
+        _auth_customer(client, customer_user)
+        r = await client.post("/api/rewards/claim", json={})
+        assert r.status_code == 200
+        data = r.json()
+        assert data["reward"]["code"] != "HS-OLDDEAD"
+        assert data["reward"]["status"] == "issued"
+
+        old_status = (
+            await db_session.execute(
+                select(Reward.status).where(Reward.code == "HS-OLDDEAD")
+            )
+        ).scalar_one()
+        assert old_status == "expired"

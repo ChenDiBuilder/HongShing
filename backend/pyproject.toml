@@ -18,6 +18,9 @@ dependencies = [
     "shortuuid>=1.0,<1.1",
     "click>=8.1,<9.0",
     "pyyaml>=6.0,<7.0",
+    # Agent tool surface (/mcp). Pinned <2: mcp 2.x drags starlette past what
+    # fastapi 0.115 accepts (Router.on_startup removed) — verified 2026-08-01.
+    "mcp>=1.9,<2",
 ]
 
 [project.optional-dependencies]

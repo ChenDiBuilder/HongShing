@@ -26,12 +26,14 @@ from app.routes import (
 from app.routes.menu import router as menu_router
 from app.routes.orders import router as orders_router
 from app.routes.storefront_auth import router as storefront_auth_router
+from app.routes.storefront_customers import router as storefront_customers_router
 from app.routes.storefront_orders import router as storefront_orders_router
 from app.routes.storefront_reservations import router as storefront_reservations_router
 from app.routes.admin_devices import router as admin_devices_router
 from app.routes.admin_reservation_slots import router as admin_reservation_slots_router
 from app.routes.admin_orders import router as admin_orders_router
 from app.routes.admin_analytics import router as admin_analytics_router
+from app.routes.admin_insights import router as admin_insights_router
 from app.routes.admin_seed import router as admin_seed_router
 from app.routes.reservations import router as reservations_router
 from app.routes.cart import router as cart_router
@@ -186,7 +188,12 @@ async def lifespan(app: FastAPI):
 
     _check_sms_capability()
 
-    yield
+    # Starlette never runs a mounted sub-app's lifespan, so the MCP session
+    # manager must be driven from here or every /mcp request 500s.
+    from app.mcp_server import mcp_lifespan
+
+    async with mcp_lifespan():
+        yield
     await engine.dispose()
 
 
@@ -243,6 +250,7 @@ app.include_router(orders_router)
 
 # Storefront
 app.include_router(storefront_auth_router)
+app.include_router(storefront_customers_router)
 app.include_router(storefront_orders_router)
 app.include_router(storefront_reservations_router)
 
@@ -251,6 +259,7 @@ app.include_router(admin_devices_router)
 app.include_router(admin_reservation_slots_router)
 app.include_router(admin_orders_router, prefix="/api/admin", tags=["admin-orders"])
 app.include_router(admin_analytics_router, prefix="/api/admin", tags=["admin-analytics"])
+app.include_router(admin_insights_router, prefix="/api/admin", tags=["admin-insights"])
 app.include_router(admin_seed_router, prefix="/api/admin", tags=["admin-seed"])
 
 # Reservations (customer)
@@ -258,6 +267,12 @@ app.include_router(reservations_router)
 
 # Cart (customer)
 app.include_router(cart_router)
+
+# Agent tool surface (Act 2): the restaurant as an MCP server. Token-gated;
+# 404s when MCP_SERVICE_TOKEN is unset.
+from app.mcp_server import build_mcp_asgi  # noqa: E402
+
+app.mount("/mcp", build_mcp_asgi())
 
 
 @app.get("/api/health")

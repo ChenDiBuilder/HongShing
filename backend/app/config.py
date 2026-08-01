@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://fting@localhost:5432/hongshing"
     cors_origins: str = "http://localhost:3500,http://localhost:3501"
 
+    # Bearer token for the /mcp agent tool surface (Act 2). Empty = the mount
+    # answers 404 and the agent channel is off for this restaurant.
+    mcp_service_token: str = ""
+
     # URL path prefix the app is served under (PRD-12 / SCRUM-77). Empty for the
     # per-box model (nginx serves at the host root); the strip_demo_prefix
     # middleware is a no-op when this is "". Set DEMO_PREFIX only for a legacy

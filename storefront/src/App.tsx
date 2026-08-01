@@ -3,8 +3,9 @@ import { api } from "./lib/api";
 import { PinLogin } from "./pages/PinLogin";
 import { OrdersDashboard } from "./pages/OrdersDashboard";
 import { ReservationsView } from "./pages/ReservationsView";
+import { FrontDesk } from "./pages/FrontDesk";
 
-type Page = "login" | "orders" | "reservations";
+type Page = "login" | "frontdesk" | "orders" | "reservations";
 
 export default function App() {
   const [page, setPage] = useState<Page>("login");
@@ -117,6 +118,11 @@ export default function App() {
         </div>
         <nav className="flex gap-2">
           <button
+            onClick={() => setPage("frontdesk")}
+            className={`min-h-[44px] px-4 py-2 rounded-lg text-base font-medium transition-colors ${page === "frontdesk" ? "bg-gray-700 text-white" : "text-gray-400 hover:text-white hover:bg-gray-800"}`}>
+            Front Desk
+          </button>
+          <button
             onClick={() => { setPage("orders"); loadOrders(); }}
             className={`min-h-[44px] px-4 py-2 rounded-lg text-base font-medium transition-colors ${page === "orders" ? "bg-gray-700 text-white" : "text-gray-400 hover:text-white hover:bg-gray-800"}`}>
             Orders
@@ -131,6 +137,8 @@ export default function App() {
           </button>
         </nav>
       </header>
+
+      {page === "frontdesk" && <FrontDesk />}
 
       {page === "orders" && (
         <OrdersDashboard
