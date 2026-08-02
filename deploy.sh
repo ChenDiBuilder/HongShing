@@ -1,11 +1,11 @@
 #!/bin/bash
 # HongShing — deploy to the single EC2 box.
-# Usage: AWS_PROFILE=bridgeway SSH_KEY=bridgeway-portal bash deploy.sh [--infra] [--app-only]
+# Usage: AWS_PROFILE=platform-demo SSH_KEY=bridgeway-portal bash deploy.sh [--infra] [--app-only]
 #   --infra     also run `terraform apply` (REVIEW the plan — a replace wipes the DB)
 #   --app-only  skip terraform entirely (just rebuild + redeploy app)
 set -e
 
-AWS_PROFILE="${AWS_PROFILE:-bridgeway}"
+AWS_PROFILE="${AWS_PROFILE:-platform-demo}"
 AWS_REGION="us-east-1"
 SSH_KEY="${SSH_KEY:-bridgeway-portal}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
