@@ -36,6 +36,9 @@ services:
       # SMS-only region (out of sandbox + origination number live here); rest stays us-east-1.
       SNS_REGION: ${SNS_REGION:-us-east-2}
       OWNER_EMAIL: ${OWNER_EMAIL:-owner@hongshing.com}
+      # Agent tool surface (Act 2): bearer token for /mcp. Empty default ON
+      # PURPOSE — without it the mount answers 404, so clone boxes stay dark.
+      MCP_SERVICE_TOKEN: ${MCP_SERVICE_TOKEN:-}
     depends_on:
       db:
         condition: service_healthy
