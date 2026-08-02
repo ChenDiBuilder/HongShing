@@ -15,6 +15,7 @@ with its own Host handling.
 from contextlib import asynccontextmanager
 
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 
 from app.config import get_settings
 from app.database import async_session
@@ -34,6 +35,13 @@ server = FastMCP(
     streamable_http_path="/",
     stateless_http=True,
     json_response=True,
+    # The SDK's Host allowlist defaults to localhost-only, which rejects every
+    # request arriving under the box's real domain. TokenGate runs before this
+    # app ever sees a request, so the bearer token — not the Host header — is
+    # the gate.
+    transport_security=TransportSecuritySettings(
+        enable_dns_rebinding_protection=False
+    ),
 )
 
 
