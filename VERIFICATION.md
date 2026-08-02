@@ -47,6 +47,16 @@ Following tenet T1, every feature is verified at three layers:
 | `test_database.py` | Alembic head is current (no pending migrations), session yields and closes, all Phase 1 models present in migration output |
 | `test_cli.py` | create-owner seeds user with bcrypt hash, reset-owner updates password and forces change, duplicate create is idempotent |
 
+### 2.2b Lint gate (all three SPAs — SCRUM-212)
+
+Every SPA must lint clean before a PR: `npx eslint . --max-warnings 0` in
+`customer-web/`, `admin/`, and `storefront/`. The debt was cleared to zero on
+2026-08-02 (real interfaces instead of `any`, canonical cancelled-flag effects
+instead of sync setState, commented best-effort catches) — no global rule
+disables, no `eslint-disable` lines. Keep it at zero: CI's SPA jobs build but
+do not yet lint, so this gate is part of the manual verification path until
+the workflow (a guarded file) is updated by Daniel.
+
 ### 2.3 Frontend Tests (vitest + @testing-library/react)
 
 ```

@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { api } from "../lib/api";
 import { STATUS_COLORS, STATUS_LABEL, formatReservationForCopy } from "../lib/types";
+import type { StorefrontReservation } from "../lib/types";
 
 interface Props {
-  reservations: any[];
+  reservations: StorefrontReservation[];
   onUpdate: () => void;
 }
 
@@ -27,7 +28,7 @@ export function ReservationsView({ reservations, onUpdate }: Props) {
         </div>
       ) : (
         <div className="space-y-4">
-          {reservations.map((r: any) => (
+          {reservations.map((r) => (
             <ReservationCard key={r.id} reservation={r} onUpdate={onUpdate} />
           ))}
         </div>
@@ -36,7 +37,7 @@ export function ReservationsView({ reservations, onUpdate }: Props) {
   );
 }
 
-function ReservationCard({ reservation, onUpdate }: { reservation: any; onUpdate: () => void }) {
+function ReservationCard({ reservation, onUpdate }: { reservation: StorefrontReservation; onUpdate: () => void }) {
   const [status, setStatus] = useState(reservation.status);
   const [copied, setCopied] = useState(false);
 
@@ -49,7 +50,7 @@ function ReservationCard({ reservation, onUpdate }: { reservation: any; onUpdate
         body: JSON.stringify({ status: newStatus }),
       });
       if (res.ok) { setStatus(newStatus); onUpdate(); }
-    } catch {}
+    } catch { /* best-effort — leave status unchanged if the network call fails */ }
   }
 
   function handleCopy() {

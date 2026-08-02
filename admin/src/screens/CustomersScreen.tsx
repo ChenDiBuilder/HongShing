@@ -51,12 +51,25 @@ export default function CustomersScreen({ selectedCustomerId }: Props) {
     setSelected(d.data);
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const r = await fetch(`${apiBase}/api/admin/customers`, { credentials: "include" });
+      const d = await r.json();
+      if (!cancelled) { setCustomers(d.data?.items || []); setLoading(false); }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
-    if (selectedCustomerId) {
-      viewCustomer(selectedCustomerId);
-    }
+    if (!selectedCustomerId) return;
+    let cancelled = false;
+    (async () => {
+      const r = await fetch(`${apiBase}/api/admin/customers/${selectedCustomerId}`, { credentials: "include" });
+      const d = await r.json();
+      if (!cancelled) setSelected(d.data);
+    })();
+    return () => { cancelled = true; };
   }, [selectedCustomerId]);
 
   if (selected) {

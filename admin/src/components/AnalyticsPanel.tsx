@@ -19,7 +19,7 @@ interface ActivityItem {
   detail: string | null;
 }
 
-interface AnalyticsData {
+export interface AnalyticsData {
   summary: {
     today: { scans: number; signups: number; rewards_issued: number; rewards_redeemed: number; redirects: number; orders: number; revenue_cents: number };
     period: { scans: number; signups: number; rewards_issued: number; rewards_redeemed: number; redirects: number; orders: number; revenue_cents: number };

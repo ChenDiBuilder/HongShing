@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { api } from "./lib/api";
+import type { StorefrontOrder, StorefrontReservation } from "./lib/types";
 import { PinLogin } from "./pages/PinLogin";
 import { OrdersDashboard } from "./pages/OrdersDashboard";
 import { ReservationsView } from "./pages/ReservationsView";
@@ -10,8 +11,8 @@ type Page = "login" | "frontdesk" | "orders" | "reservations";
 export default function App() {
   const [page, setPage] = useState<Page>("login");
   const [device, setDevice] = useState<{ id: string; name: string; location?: string } | null>(null);
-  const [orders, setOrders] = useState<any[]>([]);
-  const [reservations, setReservations] = useState<any[]>([]);
+  const [orders, setOrders] = useState<StorefrontOrder[]>([]);
+  const [reservations, setReservations] = useState<StorefrontReservation[]>([]);
   const [orderFilter, setOrderFilter] = useState("confirmed");
   const [refetchKey, setRefetchKey] = useState(0);
   const [restoring, setRestoring] = useState(true);
@@ -25,7 +26,7 @@ export default function App() {
           setOrders(data.orders || []);
           setPage("orders");
         }
-      } catch {}
+      } catch { /* best-effort — no valid session, stay on the PIN screen */ }
       setRestoring(false);
     }
     restoreSession();
@@ -36,7 +37,7 @@ export default function App() {
       const res = await fetch(api("/api/storefront/orders"), { credentials: "include" });
       const data = await res.json();
       setOrders(data.orders || []);
-    } catch {}
+    } catch { /* best-effort — keep the last loaded orders on fetch failure */ }
   }, []);
 
   const loadReservations = useCallback(async () => {
@@ -45,21 +46,24 @@ export default function App() {
       const res = await fetch(api(`/api/storefront/reservations?reservation_date=${today}`), { credentials: "include" });
       const data = await res.json();
       setReservations(data.reservations || []);
-    } catch {}
+    } catch { /* best-effort — keep the last loaded reservations on fetch failure */ }
   }, []);
 
   useEffect(() => {
-    if (page === "orders") {
-      loadOrders();
-      const interval = setInterval(loadOrders, 8000);
-      return () => clearInterval(interval);
-    }
+    if (page !== "orders") return;
+    let cancelled = false;
+    const tick = async () => { if (!cancelled) await loadOrders(); };
+    void tick();
+    const interval = setInterval(() => { void tick(); }, 8000);
+    return () => { cancelled = true; clearInterval(interval); };
   }, [page, loadOrders, refetchKey]);
 
   useEffect(() => {
-    if (page === "reservations") {
-      loadReservations();
-    }
+    if (page !== "reservations") return;
+    let cancelled = false;
+    const tick = async () => { if (!cancelled) await loadReservations(); };
+    void tick();
+    return () => { cancelled = true; };
   }, [page, loadReservations, refetchKey]);
 
   function handleLogin(deviceData: { id: string; name: string; location?: string }) {

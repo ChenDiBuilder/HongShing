@@ -28,8 +28,8 @@ export function PinLogin({ onLogin }: Props) {
       }
       const data = await res.json();
       onLogin(data.device);
-    } catch (e: any) {
-      setError(e.message || "Login failed");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Login failed");
     } finally {
       setLoading(false);
     }

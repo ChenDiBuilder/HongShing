@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 
 const apiBase = import.meta.env.VITE_API_BASE ?? "";
 
@@ -13,13 +13,20 @@ export default function DevicesScreen({ showToast }: Props) {
   const [newDevice, setNewDevice] = useState<{ name: string; pin: string } | null>(null);
   const [error, setError] = useState("");
 
-  const loadDevices = useCallback(async () => {
+  async function loadDevices() {
     setLoading(true);
     const r = await fetch(`${apiBase}/api/admin/devices`, { credentials: "include" }); const d = await r.json(); setDevices(d.data || []);
     setLoading(false);
-  }, []);
+  }
 
-  useEffect(() => { loadDevices(); }, [loadDevices]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const r = await fetch(`${apiBase}/api/admin/devices`, { credentials: "include" }); const d = await r.json();
+      if (!cancelled) { setDevices(d.data || []); setLoading(false); }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault(); setError("");
