@@ -215,12 +215,43 @@ class TestTokenGate:
         # the test client skips — enter it exactly as main.py's lifespan does.
         from app.mcp_server import mcp_lifespan
 
+        # The session manager's run() is one-shot per process, so every
+        # past-the-gate probe shares this single lifespan entry.
         async with mcp_lifespan():
             r = await client.post(
                 "/mcp/",
                 json={},
                 headers={"Authorization": "Bearer test-token-123"},
             )
-        # Past the gate: the MCP transport answers protocol errors itself
-        # (missing Accept headers etc.) — anything but 401/404 proves the gate.
-        assert r.status_code not in (401, 404)
+            # Past the gate: the MCP transport answers protocol errors itself
+            # (missing Accept headers etc.) — anything but 401/404 proves the gate.
+            assert r.status_code not in (401, 404)
+
+            # Regression (2026-08-02): the SDK's DNS-rebinding protection
+            # defaults to a localhost-only Host allowlist, so the first
+            # real-domain request on the pilot box got "Invalid Host header" —
+            # and the loose assertion above can't catch that class (421 also
+            # isn't 401/404). A full initialize under the public domain must
+            # succeed end-to-end.
+            r = await client.post(
+                "/mcp/",
+                json={
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "initialize",
+                    "params": {
+                        "protocolVersion": "2025-03-26",
+                        "capabilities": {},
+                        "clientInfo": {"name": "host-check", "version": "0"},
+                    },
+                },
+                headers={
+                    "Authorization": "Bearer test-token-123",
+                    "Host": "hongshing.demo.bridgewayinnovations.ca",
+                    "Accept": "application/json, text/event-stream",
+                },
+            )
+            assert r.status_code == 200, r.text
+            assert (
+                r.json()["result"]["serverInfo"]["name"] == "restaurant-ordering"
+            )
