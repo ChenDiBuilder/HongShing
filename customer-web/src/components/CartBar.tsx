@@ -1,9 +1,10 @@
 import { useCart } from "../context/CartContext";
 import { formatPrice } from "../types";
+import type { Page } from "../types";
 
 interface Props {
   primaryColor: string;
-  setPage: (p: any) => void;
+  setPage: (p: Page) => void;
 }
 
 export function CartBar({ primaryColor, setPage }: Props) {

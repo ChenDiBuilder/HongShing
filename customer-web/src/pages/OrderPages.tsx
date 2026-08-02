@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { formatPrice, RESTAURANT_INFO } from "../types";
+import type { CustomerOrder, OrderConfirmationData, Page, UserReward } from "../types";
 import { api } from "../context/api";
 import { useCart } from "../context/CartContext";
 
 interface OrderConfirmationProps {
-  order: any;
+  order: OrderConfirmationData;
   primaryColor: string;
-  setPage: (p: any) => void;
+  setPage: (p: Page) => void;
   loadMenu: () => void;
 }
 
@@ -21,7 +22,7 @@ export function OrderConfirmation({ order, primaryColor, setPage, loadMenu }: Or
         const r = await fetch(api(`/api/customer/me/orders/${orderId}`), { credentials: "include" });
         const d = await r.json();
         if (d.order?.status) setStatus(d.order.status);
-      } catch {}
+      } catch { /* best-effort status poll, ignore failure */ }
     }, 10000);
     return () => clearInterval(timer);
   }, [orderId]);
@@ -54,7 +55,7 @@ export function OrderConfirmation({ order, primaryColor, setPage, loadMenu }: Or
       {order?.items && (
         <div className="text-left bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-4 max-w-sm mx-auto">
           <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold mb-2">Your Items</p>
-          {order.items.map((i: any, idx: number) => (
+          {order.items.map((i, idx) => (
             <div key={idx} className="flex justify-between text-sm py-1">
               <span>{i.quantity}x {i.name}</span>
               <span className="text-gray-500">{formatPrice(i.price_cents * i.quantity)}</span>
@@ -88,8 +89,8 @@ export function OrderConfirmation({ order, primaryColor, setPage, loadMenu }: Or
 }
 
 interface OrderTrackingProps {
-  orders: any[];
-  setPage: (p: any) => void;
+  orders: CustomerOrder[];
+  setPage: (p: Page) => void;
   loadMenu: () => void;
   primaryColor: string;
 }
@@ -104,10 +105,11 @@ export function OrderTracking({ orders, setPage, loadMenu, primaryColor }: Order
     cancelled: "bg-red-100 text-red-500",
   };
 
-  function handleReorder(order: any) {
+  function handleReorder(order: CustomerOrder) {
     for (const item of (order.items || [])) {
       for (let i = 0; i < item.quantity; i++) {
-        cart.addItem({ id: item.menu_item_id || item.id, category_id: "", name: item.name, description: null, price_cents: item.price_cents, image_url: null, tags: [] });
+        // History lines may omit both ids; the value is passed through unchanged.
+        cart.addItem({ id: (item.menu_item_id || item.id) as string, category_id: "", name: item.name, description: null, price_cents: item.price_cents, image_url: null, tags: [] });
       }
     }
     setPage("cart");
@@ -129,13 +131,13 @@ export function OrderTracking({ orders, setPage, loadMenu, primaryColor }: Order
   return (
     <div className="space-y-3 pb-4">
       <h1 className="text-xl font-bold text-gray-800 mb-3">My Orders</h1>
-      {orders.map((o: any) => (
+      {orders.map((o) => (
         <div key={o.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs text-gray-400">#{o.id.slice(-8)}</span>
             <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${statusColors[o.status] || "bg-gray-100"}`}>{o.status}</span>
           </div>
-          {o.items?.map((i: any, idx: number) => (
+          {o.items?.map((i, idx) => (
             <div key={idx} className="flex justify-between text-sm py-0.5">
               <span>{i.quantity}x {i.name}</span>
               <span className="text-gray-500">{formatPrice(i.price_cents * i.quantity)}</span>
@@ -157,9 +159,9 @@ export function OrderTracking({ orders, setPage, loadMenu, primaryColor }: Order
 }
 
 interface ProfileRewardsProps {
-  rewards: any[];
+  rewards: UserReward[];
   primaryColor: string;
-  setPage: (p: any) => void;
+  setPage: (p: Page) => void;
   loadRewards: () => void;
 }
 
@@ -198,7 +200,7 @@ export function ProfileRewards({ rewards, primaryColor, setPage, loadRewards }: 
           <p className="text-sm">Order pickup 3 times to earn your first reward!</p>
         </div>
       ) : (
-        rewards.map((r: any) => (
+        rewards.map((r) => (
           <div key={r.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm text-gray-400">{new Date(r.issued_at).toLocaleDateString()}</span>

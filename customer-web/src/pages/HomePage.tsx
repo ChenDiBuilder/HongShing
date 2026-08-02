@@ -1,4 +1,5 @@
 import { RESTAURANT_INFO } from "../types";
+import type { Page } from "../types";
 
 interface Props {
   primaryColor: string;
@@ -10,7 +11,7 @@ interface Props {
   onExternalOrder?: () => void;
   campaign?: { landing_headline?: string; landing_subtitle?: string } | null;
   isOpen?: boolean;
-  setPage: (p: any) => void;
+  setPage: (p: Page) => void;
   loadMenu: () => void;
   onClaimReward: () => void;
 }

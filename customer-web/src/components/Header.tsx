@@ -1,22 +1,21 @@
 import { formatPrice } from "../types";
+import type { CustomerProfile, LandingConfig, Page } from "../types";
 
 interface HeaderProps {
-  config: any;
-  profile?: any;
+  config: LandingConfig;
+  profile?: CustomerProfile | null;
   itemCount: number;
   subtotalCents: number;
-  setPage: (p: any) => void;
+  setPage: (p: Page) => void;
   loadMenu: () => void;
   loadRewards: () => void;
-  loadReservationSlots: () => void;
-  loadMyReservations: () => void;
   loadCustomerOrders: () => void;
   handleLogout?: () => void;
   onSignIn?: () => void;
   onExternalOrder?: () => void;
 }
 
-export function Header({ config, profile, itemCount, subtotalCents, setPage, loadMenu, loadRewards, loadReservationSlots: _rs, loadMyReservations: _mr, loadCustomerOrders, handleLogout, onSignIn, onExternalOrder }: HeaderProps) {
+export function Header({ config, profile, itemCount, subtotalCents, setPage, loadMenu, loadRewards, loadCustomerOrders, handleLogout, onSignIn, onExternalOrder }: HeaderProps) {
   const primary = config?.primary_color || "#111827";
   // Only show the external "Order Online" CTA when a redirect URL is configured
   // (PRD-12 S10 / SCRUM-78) — never a hardcoded link.
@@ -75,7 +74,7 @@ function CartBtn({ itemCount, subtotalCents, onClick }: { itemCount: number; sub
   );
 }
 
-export function Footer({ setPage, config }: { setPage: (p: any) => void; config?: any }) {
+export function Footer({ setPage, config }: { setPage: (p: Page) => void; config?: LandingConfig }) {
   return (
     <footer className="border-t border-gray-100 bg-white">
       <div className="max-w-3xl mx-auto px-4 py-6 flex items-center justify-between text-xs text-gray-400">

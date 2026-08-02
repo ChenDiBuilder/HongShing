@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { CartContext, createCartState } from "./context/CartContext";
+import { CartContext, useCartState } from "./context/CartContext";
 import { api } from "./context/api";
 import { Header, Footer } from "./components/Header";
 import { ClosedBanner } from "./components/ClosedBanner";
@@ -10,7 +10,7 @@ import { LandingPage, OtpPage, RewardPage } from "./pages/AuthPages";
 import { OrderConfirmation, OrderTracking, ProfileRewards } from "./pages/OrderPages";
 import { ReservationPage, TermsPage, PrivacyPage } from "./pages/ReservationPage";
 import { applyRestaurantConfig } from "./types";
-import type { Page, LandingConfig, MenuItemType, UserReward } from "./types";
+import type { Page, LandingConfig, MenuItemType, UserReward, CustomerProfile, MenuCategory, OrderConfirmationData, CustomerOrder } from "./types";
 
 export default function App() {
   const [page, setPage] = useState<Page>("menu");
@@ -18,46 +18,45 @@ export default function App() {
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<CustomerProfile | null>(null);
   const [rewards, setRewards] = useState<UserReward[]>([]);
   const [config, setConfig] = useState<LandingConfig>({ restaurant_name: "", primary_color: "#111827", allow_order_without_signup: true });
-  const [menu, setMenu] = useState<any[]>([]);
+  const [menu, setMenu] = useState<MenuCategory[]>([]);
   const [activeCategory, setActiveCategory] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<MenuItemType | null>(null);
-  const [orderConfirmation, setOrderConfirmation] = useState<any>(null);
-  const [customerOrders, setCustomerOrders] = useState<any[]>([]);
+  const [orderConfirmation, setOrderConfirmation] = useState<OrderConfirmationData | null>(null);
+  const [customerOrders, setCustomerOrders] = useState<CustomerOrder[]>([]);
+  // Campaign source from the URL; captured once as state (not a ref) so it can
+  // be read during render.
+  const [source] = useState(() => new URLSearchParams(window.location.search).get("source") || undefined);
 
-  const cart = createCartState(profile);
+  const cart = useCartState(profile);
 
-  const sourceRef = useRef<string | undefined>(undefined);
   const returnPageRef = useRef<Page>("menu");
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    sourceRef.current = params.get("source") || undefined;
-  }, []);
-
-  useEffect(() => {
     fetch(api("/api/customer/me"), { credentials: "include" })
+      // The profile transition triggers the cart-state effect, which loads the
+      // server cart — no explicit loadCart() needed here.
       .then((r) => r.json())
-      .then((u) => { if (u.id) { setProfile(u); cart.loadCart(); } })
+      .then((u) => { if (u.id) setProfile(u); })
       .catch(() => {});
   }, []);
 
   useEffect(() => {
-    fetch(api(`/api/public/landing-config${sourceRef.current ? `?source=${sourceRef.current}` : ""}`))
+    fetch(api(`/api/public/landing-config${source ? `?source=${source}` : ""}`))
       .then((r) => r.json()).then((cfg: LandingConfig) => {
         applyRestaurantConfig(cfg);
         setConfig(cfg);
         if (cfg.restaurant_name) document.title = `${cfg.restaurant_name} — Pickup & Rewards`;
       }).catch(() => {});
-  }, []);
+  }, [source]);
 
   const loadMenu = useCallback(async () => {
     fetch(api("/api/menu/full"))
-      .then((r) => r.json()).then((data: any[]) => {
+      .then((r) => r.json()).then((data: MenuCategory[]) => {
         setMenu(data);
-        if (!activeCategory) setActiveCategory(data[0]?.slug || "");
+        setActiveCategory((prev) => prev || data[0]?.slug || "");
       }).catch(() => {});
   }, []);
 
@@ -84,14 +83,14 @@ export default function App() {
       window.removeEventListener("order-placed", onOrderPlaced);
       window.removeEventListener("signin-required", onSignIn);
     };
-  }, []);
+  }, [page]);
 
   const verifyCode = useCallback(async (code: string) => {
     setLoading(true); setError("");
     try {
       const res = await fetch(api("/api/auth/verify-otp"), {
         method: "POST", headers: { "Content-Type": "application/json" },
-        credentials: "include", body: JSON.stringify({ phone, code, source_code: sourceRef.current }),
+        credentials: "include", body: JSON.stringify({ phone, code, source_code: source }),
       });
       if (!res.ok) throw new Error("Invalid code");
       const d = await res.json();
@@ -100,9 +99,9 @@ export default function App() {
       try {
         await fetch(api("/api/rewards/claim"), {
           method: "POST", headers: { "Content-Type": "application/json" },
-          credentials: "include", body: JSON.stringify({ source_code: sourceRef.current }),
+          credentials: "include", body: JSON.stringify({ source_code: source }),
         });
-      } catch {}
+      } catch { /* best-effort reward claim, ignore failure */ }
       loadRewards();
       await loadMenu();
       const goTo = returnPageRef.current === "otp" || returnPageRef.current === "landing" ? "menu" : returnPageRef.current;
@@ -110,7 +109,7 @@ export default function App() {
       setPage(goTo);
     } catch { setError("Invalid or expired code."); }
     finally { setLoading(false); }
-  }, [phone, loadRewards, loadMenu, cart]);
+  }, [phone, source, loadRewards, loadMenu, cart]);
 
   async function handleVerify(e: React.FormEvent) {
     e.preventDefault();
@@ -146,21 +145,21 @@ export default function App() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ source_code: sourceRef.current ?? null }),
+        body: JSON.stringify({ source_code: source ?? null }),
       });
       const data = await res.json().catch(() => ({}));
       if (data?.destination_url) destination = data.destination_url;
     } catch { /* fall back to the configured URL */ }
     window.location.assign(destination);
-  }, [config.external_ordering_url]);
+  }, [config.external_ordering_url, source]);
 
   const showHeader = !["home", "landing", "otp", "reward"].includes(page);
   const showFooter = !["home", "landing", "otp", "reward"].includes(page);
 
   const header = showHeader ? (
     <Header config={config} profile={profile} itemCount={cart.itemCount} subtotalCents={cart.subtotalCents} setPage={setPage}
-      loadMenu={loadMenu} loadRewards={loadRewards} loadReservationSlots={() => {}}
-      loadMyReservations={() => {}} loadCustomerOrders={loadCustomerOrders} handleLogout={handleLogout}
+      loadMenu={loadMenu} loadRewards={loadRewards}
+      loadCustomerOrders={loadCustomerOrders} handleLogout={handleLogout}
       onExternalOrder={openExternalOrder}
       onSignIn={() => { returnPageRef.current = page as Page; setPage("landing"); }} />
   ) : null;
@@ -193,9 +192,9 @@ export default function App() {
     content = <>{content}<Footer setPage={setPage} config={config} /></>;
   } else if (page === "landing") {
     content = (
-      <LandingPage primaryColor={config.primary_color} setPage={setPage} setProfile={setProfile}
-        loadCart={cart.loadCart} loadRewards={loadRewards} setPhone={setPhone} phone={phone}
-        source={sourceRef.current} />
+      <LandingPage primaryColor={config.primary_color} setPage={setPage}
+        setPhone={setPhone} phone={phone}
+        source={source} />
     );
   } else if (page === "otp") {
     content = (
@@ -221,7 +220,7 @@ export default function App() {
   } else if (page === "order-tracking") {
     content = <>{header}{wrap(<OrderTracking orders={customerOrders} setPage={setPage} loadMenu={loadMenu} primaryColor={config.primary_color} />)}</>;
   } else if (page === "reservations") {
-    content = <>{header}{wrap(<ReservationPage primaryColor={config.primary_color} setPage={setPage} profile={profile} />)}</>;
+    content = <>{header}{wrap(<ReservationPage profile={profile} />)}</>;
   } else if (page === "terms") {
     content = <>{header}{wrap(<TermsPage />)}</>;
   } else if (page === "privacy") {

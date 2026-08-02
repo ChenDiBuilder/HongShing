@@ -1,14 +1,15 @@
 import { useState, useEffect } from "react";
 import { api } from "../context/api";
 import { getLandingConfig, type LandingConfigResponse } from "../lib/api";
+import type { CustomerProfile, Reservation, ReservationSlot } from "../types";
 
-export function ReservationPage({ primaryColor: _primaryColor, setPage: _setPage, profile }: any) {
+export function ReservationPage({ profile }: { profile: CustomerProfile | null }) {
   const [date, setDate] = useState("");
   const [party, setParty] = useState(2);
   const [notes, setNotes] = useState("");
-  const [slots, setSlots] = useState<any[]>([]);
+  const [slots, setSlots] = useState<ReservationSlot[]>([]);
   const [booked, setBooked] = useState(false);
-  const [myRes, setMyRes] = useState<any[]>([]);
+  const [myRes, setMyRes] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -24,10 +25,10 @@ export function ReservationPage({ primaryColor: _primaryColor, setPage: _setPage
       const r = await fetch(api(`/api/reservations/slots?reservation_date=${date}&party_size=${party}`));
       const d = await r.json();
       setSlots(d.slots || []);
-    } catch {}
+    } catch { /* best-effort availability check, ignore failure */ }
   }
 
-  async function book(slot: any) {
+  async function book(slot: ReservationSlot) {
     if (!profile) return;
     setLoading(true);
     try {
@@ -36,7 +37,7 @@ export function ReservationPage({ primaryColor: _primaryColor, setPage: _setPage
         body: JSON.stringify({ reservation_date: date, start_time: slot.start_time, party_size: party, notes: notes || null }),
       });
       if (r.ok) { setBooked(true); setMyRes((await fetch(api("/api/customer/me/reservations"), { credentials: "include" }).then((r) => r.json())).reservations || []); }
-    } catch {} finally { setLoading(false); }
+    } catch { /* best-effort booking, ignore failure */ } finally { setLoading(false); }
   }
 
   if (booked) return (
@@ -61,7 +62,7 @@ export function ReservationPage({ primaryColor: _primaryColor, setPage: _setPage
         <div className="bg-white rounded-2xl shadow overflow-hidden mb-6">
           <h2 className="px-6 py-3 font-semibold border-b">Available Slots</h2>
           <div className="divide-y">
-            {slots.map((s: any) => (
+            {slots.map((s) => (
               <div key={s.id} className="px-6 py-4 flex items-center justify-between">
                 <div><p className="font-semibold">{s.start_time?.slice(0, 5)} - {s.end_time?.slice(0, 5)}</p><p className="text-sm text-gray-500">{s.available_spots} table{s.available_spots !== 1 ? "s" : ""} available</p></div>
                 <button onClick={() => book(s)} disabled={s.available_spots === 0 || loading} className="px-4 py-2 bg-red-600 text-white text-sm rounded-lg disabled:opacity-50">Book</button>
@@ -75,7 +76,7 @@ export function ReservationPage({ primaryColor: _primaryColor, setPage: _setPage
         <div className="bg-white rounded-2xl shadow overflow-hidden">
           <h2 className="px-6 py-3 font-semibold border-b">My Reservations</h2>
           <div className="divide-y">
-            {myRes.map((r: any) => (
+            {myRes.map((r) => (
               <div key={r.id} className="px-6 py-3 flex justify-between items-center">
                 <div><p className="font-medium">{r.date} at {r.start_time?.slice(0, 5)}</p><p className="text-sm text-gray-500">{r.party_size} guests</p></div>
                 <span className={`text-xs px-2 py-1 rounded-full ${r.status === "confirmed" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"}`}>{r.status}</span>

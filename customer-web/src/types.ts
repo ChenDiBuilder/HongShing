@@ -43,6 +43,17 @@ export interface UserReward {
   expires_at?: string;
 }
 
+// Signed-in customer as returned by /api/customer/me and the OTP verify flow.
+export interface CustomerProfile {
+  id: string;
+  phone?: string | null;
+  name?: string | null;
+  email?: string | null;
+  role?: string;
+  created_at?: string;
+  rewards?: UserReward[];
+}
+
 export interface MenuItemType {
   id: string;
   category_id: string;
@@ -52,6 +63,74 @@ export interface MenuItemType {
   image_url: string | null;
   tags: string[];
   popular?: boolean;
+}
+
+// Category with its items as returned by /api/menu/full.
+export interface MenuCategory {
+  id?: string;
+  slug: string;
+  name: string;
+  image_url?: string | null;
+  items?: MenuItemType[];
+}
+
+// Cart line as returned by GET /api/cart for signed-in customers.
+export interface ApiCartLine {
+  id: string;
+  menu_item_id: string | null;
+  name: string;
+  price_cents: number;
+  image_url?: string | null;
+  quantity: number;
+  tags?: string[];
+}
+
+// Line on an order (checkout confirmation / order history). History lines
+// only carry name/price/quantity, so the ids are optional.
+export interface OrderLineItem {
+  id?: string;
+  menu_item_id?: string | null;
+  name: string;
+  price_cents: number;
+  quantity: number;
+}
+
+// Checkout response from POST /api/cart/checkout (order-placed event detail).
+export interface OrderConfirmationData {
+  order_id?: string;
+  status?: string;
+  total_cents: number;
+  items?: OrderLineItem[];
+}
+
+// Order as returned by /api/customer/me/orders.
+export interface CustomerOrder {
+  id: string;
+  status: string;
+  total_cents: number;
+  created_at: string;
+  items?: OrderLineItem[];
+}
+
+// Availability slot from /api/reservations/slots.
+export interface ReservationSlot {
+  id: string;
+  start_time: string | null;
+  end_time: string | null;
+  available_spots: number;
+  max_party_size?: number;
+  max_reservations?: number;
+}
+
+// Reservation as returned by /api/customer/me/reservations.
+export interface Reservation {
+  id: string;
+  date: string;
+  start_time: string | null;
+  end_time?: string | null;
+  party_size: number;
+  status: string;
+  notes?: string | null;
 }
 
 export interface CartItem {
@@ -133,4 +212,18 @@ export function applyRestaurantConfig(cfg: LandingConfig) {
 export function formatPrice(cents: number) {
   if (cents == null || isNaN(cents)) return `${currencySymbol}0.00`;
   return `${currencySymbol}${(cents / 100).toFixed(2)}`;
+}
+
+// Mirror of the backend reward_service.calculate_discount, for a live cart preview.
+// The server re-computes authoritatively at checkout; this only previews the line.
+// (Lives here rather than in CartPage so component files only export components.)
+export function estimateDiscount(reward: UserReward | undefined, subtotalCents: number): number {
+  if (!reward) return 0;
+  const v = reward.reward_value ?? 0;
+  if (subtotalCents <= 0 || v <= 0) return 0;
+  if (reward.reward_type === "percent" || reward.reward_type === "percentage") {
+    return Math.min(Math.floor((subtotalCents * v) / 100), subtotalCents);
+  }
+  if (reward.reward_type === "fixed") return Math.min(v, subtotalCents);
+  return 0;
 }
