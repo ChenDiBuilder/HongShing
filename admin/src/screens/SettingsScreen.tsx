@@ -4,8 +4,18 @@ const apiBase = import.meta.env.VITE_API_BASE ?? "";
 
 interface Props { showToast: (msg: string, type?: "success" | "error") => void; }
 
+interface Settings {
+  restaurant_name?: string;
+  primary_color?: string;
+  logo_url?: string;
+  external_ordering_url?: string;
+  external_ordering_provider?: string;
+  privacy_contact_email?: string;
+  support_phone?: string;
+}
+
 export default function SettingsScreen({ showToast }: Props) {
-  const [settings, setSettings] = useState<any>({});
+  const [settings, setSettings] = useState<Settings>({});
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {

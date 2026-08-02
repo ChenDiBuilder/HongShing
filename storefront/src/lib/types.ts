@@ -37,7 +37,34 @@ export function timeAgo(iso: string): string {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
-export function formatOrderForCopy(order: any): string {
+export interface StorefrontOrderItem {
+  name: string;
+  price_cents: number;
+  quantity: number;
+}
+
+export interface StorefrontOrder {
+  id: string;
+  status: string;
+  customer_name?: string | null;
+  customer_phone?: string | null;
+  items?: StorefrontOrderItem[];
+  total_cents: number;
+  item_count: number;
+  created_at: string;
+}
+
+export interface StorefrontReservation {
+  id: string;
+  status: string;
+  guest_name: string;
+  guest_phone: string;
+  party_size: number;
+  start_time?: string | null;
+  notes?: string | null;
+}
+
+export function formatOrderForCopy(order: StorefrontOrder): string {
   let text = `Order #${order.id.slice(0, 8)}\n`;
   text += `Status: ${STATUS_LABEL[order.status] || order.status}\n`;
   text += `Phone: ${order.customer_phone || "N/A"}\n`;
@@ -50,7 +77,7 @@ export function formatOrderForCopy(order: any): string {
   return text;
 }
 
-export function formatReservationForCopy(r: any): string {
+export function formatReservationForCopy(r: StorefrontReservation): string {
   let text = `Reservation: ${r.guest_name}\n`;
   text += `Time: ${r.start_time?.slice(0, 5)}\n`;
   text += `Party: ${r.party_size} guests\n`;

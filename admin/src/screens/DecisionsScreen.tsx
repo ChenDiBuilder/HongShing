@@ -107,17 +107,29 @@ function rhythm(p: Person): string {
   return `came ${cad} · gone ${gone}`;
 }
 
-function daysAgo(iso: string): string {
-  const d = Math.round((Date.now() - new Date(iso).getTime()) / 86400000);
+function daysAgo(iso: string, now: number): string {
+  const d = Math.round((now - new Date(iso).getTime()) / 86400000);
   if (d <= 0) return "today";
   if (d === 1) return "yesterday";
   return `${d} days ago`;
+}
+
+async function fetchInsights(): Promise<{ data: InsightsData } | null> {
+  try {
+    const r = await fetch(`${apiBase}/api/admin/insights`, { credentials: "include" });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch {
+    return null;
+  }
 }
 
 interface Props { showToast: (message: string, type?: "success" | "error") => void; }
 
 export default function DecisionsScreen({ showToast }: Props) {
   const [data, setData] = useState<InsightsData | null>(null);
+  // Wall-clock captured when insights land — render math uses this instead of Date.now().
+  const [loadedAt, setLoadedAt] = useState(0);
   const [error, setError] = useState(false);
   // Per-card UI state, keyed by card.key.
   const [deselected, setDeselected] = useState<Record<string, Set<string>>>({});
@@ -128,18 +140,33 @@ export default function DecisionsScreen({ showToast }: Props) {
   const [receipts, setReceipts] = useState<Record<string, ActResult>>({});
 
   const load = useCallback(async () => {
-    try {
-      const r = await fetch(`${apiBase}/api/admin/insights`, { credentials: "include" });
-      if (!r.ok) throw new Error();
-      const d = await r.json();
-      setData(d.data);
+    const res = await fetchInsights();
+    if (res) {
+      const ts = Date.now();
+      setData(res.data);
+      setLoadedAt(ts);
       setError(false);
-    } catch {
+    } else {
       setError(true);
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const res = await fetchInsights();
+      if (cancelled) return;
+      if (res) {
+        const ts = Date.now();
+        setData(res.data);
+        setLoadedAt(ts);
+        setError(false);
+      } else {
+        setError(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   function targetsFor(card: Card): string[] {
     const off = deselected[card.key] ?? new Set<string>();
@@ -245,8 +272,9 @@ export default function DecisionsScreen({ showToast }: Props) {
             smsConfigured={data.sms_configured}
             recentAction={data.actions.find(
               a => a.insight_key === card.key &&
-                Date.now() - new Date(a.created_at).getTime() < 14 * 86400000
+                loadedAt - new Date(a.created_at).getTime() < 14 * 86400000
             )}
+            now={loadedAt}
             targets={targetsFor(card)}
             deselected={deselected[card.key] ?? new Set()}
             onToggleTarget={id => toggleTarget(card.key, id)}
@@ -275,7 +303,7 @@ export default function DecisionsScreen({ showToast }: Props) {
           <h2 className="text-lg font-bold mb-1">What you've acted on</h2>
           <p className="text-sm text-gray-500 mb-3">Results update live — every redemption traces back to the decision that caused it.</p>
           <div className="bg-white rounded-xl shadow-sm divide-y">
-            {data.actions.map(a => <ActionRow key={a.id} action={a} />)}
+            {data.actions.map(a => <ActionRow key={a.id} action={a} now={loadedAt} />)}
           </div>
         </div>
       )}
@@ -283,17 +311,17 @@ export default function DecisionsScreen({ showToast }: Props) {
   );
 }
 
-function ActionRow({ action: a }: { action: PastAction }) {
+function ActionRow({ action: a, now }: { action: PastAction; now: number }) {
   const label = INSIGHT_LABELS[a.insight_key] ?? a.insight_key;
   const isOffer = a.action_type === "send_offer";
-  const fresh = Date.now() - new Date(a.created_at).getTime() < 7 * 86400000;
+  const fresh = now - new Date(a.created_at).getTime() < 7 * 86400000;
   return (
     <div className="p-4 flex items-center justify-between gap-4">
       <div>
         <p className="text-sm font-medium">
           {label}
           {a.template_name && <span className="text-gray-500"> — {a.template_name}</span>}
-          <span className="text-gray-400"> · {daysAgo(a.created_at)}</span>
+          <span className="text-gray-400"> · {daysAgo(a.created_at, now)}</span>
         </p>
         <p className="text-xs text-gray-500 mt-0.5">
           {isOffer
@@ -320,6 +348,7 @@ interface CardProps {
   templates: Template[];
   smsConfigured: boolean;
   recentAction?: PastAction;
+  now: number;
   targets: string[];
   deselected: Set<string>;
   onToggleTarget: (id: string) => void;
@@ -337,7 +366,7 @@ interface CardProps {
 const PREVIEW_ROWS = 5;
 
 function DecisionCard(props: CardProps) {
-  const { card, templates, smsConfigured, recentAction, targets, deselected,
+  const { card, templates, smsConfigured, recentAction, now, targets, deselected,
     onToggleTarget, expanded, onToggleExpand, templateId, onTemplate,
     confirming, onConfirm, acting, receipt, onAct } = props;
   const p = PRIORITY[card.priority];
@@ -357,7 +386,7 @@ function DecisionCard(props: CardProps) {
 
       {recentAction && !receipt && (
         <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2 mb-3">
-          You acted on this {daysAgo(recentAction.created_at)} — {recentAction.rewards_issued || recentAction.targeted_count} people,{" "}
+          You acted on this {daysAgo(recentAction.created_at, now)} — {recentAction.rewards_issued || recentAction.targeted_count} people,{" "}
           {recentAction.outcome.redeemed} came back so far. Sending again is safe: nobody gets a second copy of the same reward.
         </p>
       )}

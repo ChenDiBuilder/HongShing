@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { api } from "../lib/api";
 import { STATUS_COLORS, STATUS_LABEL, ORDER_FILTERS, timeAgo } from "../lib/types";
+import type { StorefrontOrder } from "../lib/types";
 
 interface Props {
-  orders: any[];
+  orders: StorefrontOrder[];
   activeFilter: string;
   onFilterChange: (key: string) => void;
   filterCounts: Record<string, number>;
@@ -38,7 +39,7 @@ export function OrdersDashboard({ orders, activeFilter, onFilterChange, filterCo
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {orders.map((order: any) => (
+          {orders.map((order) => (
             <OrderCard key={order.id} order={order} />
           ))}
         </div>
@@ -47,7 +48,7 @@ export function OrdersDashboard({ orders, activeFilter, onFilterChange, filterCo
   );
 }
 
-function OrderCard({ order }: { order: any }) {
+function OrderCard({ order }: { order: StorefrontOrder }) {
   const [status, setStatus] = useState(order.status);
 
   async function updateStatus(newStatus: string) {
@@ -59,7 +60,7 @@ function OrderCard({ order }: { order: any }) {
         body: JSON.stringify({ status: newStatus }),
       });
       if (res.ok) setStatus(newStatus);
-    } catch {}
+    } catch { /* best-effort — leave status unchanged if the network call fails */ }
   }
 
   const statusBadge = (
@@ -92,7 +93,7 @@ function OrderCard({ order }: { order: any }) {
       )}
 
       <div className="px-5 py-3 space-y-2.5">
-        {order.items?.map((item: any, i: number) => (
+        {order.items?.map((item, i) => (
           <div key={i} className="flex justify-between text-base">
             <span className="font-medium text-gray-800">{item.quantity}x {item.name}</span>
             <span className="text-gray-500 ml-2">${(item.price_cents / 100).toFixed(2)}</span>

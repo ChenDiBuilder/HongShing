@@ -7,9 +7,11 @@ import SettingsScreen from "./screens/SettingsScreen";
 import DevicesScreen from "./screens/DevicesScreen";
 import ReservationSlotsScreen from "./screens/ReservationSlotsScreen";
 import OrdersScreen from "./screens/OrdersScreen";
-import { AnalyticsPanel } from "./components/AnalyticsPanel";
+import { AnalyticsPanel, type AnalyticsData } from "./components/AnalyticsPanel";
 
 type Page = "login" | "change-password" | "dashboard" | "decisions" | "qr-campaigns" | "rewards" | "customers" | "orders" | "settings" | "devices" | "reservation-slots";
+
+interface DashboardData { scans_today: number; signups_today: number; redirects_today: number; sms_opt_in_rate: number; }
 
 const apiBase = import.meta.env.VITE_API_BASE ?? "";
 
@@ -50,8 +52,8 @@ export default function App() {
   const [newPassword, setNewPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [dashboard, setDashboard] = useState<any>(null);
-  const [analytics, setAnalytics] = useState<any>(null);
+  const [dashboard, setDashboard] = useState<DashboardData | null>(null);
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [dateRange, setDateRange] = useState("14");
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [ordersFilter, setOrdersFilter] = useState("");
@@ -96,16 +98,16 @@ export default function App() {
   }
 
   async function handleLogout() {
-    try { await fetch(`${apiBase}/api/admin/auth/logout`, { method: "POST", credentials: "include" }); } catch {}
+    try { await fetch(`${apiBase}/api/admin/auth/logout`, { method: "POST", credentials: "include" }); } catch { /* best-effort — sign out locally regardless */ }
     setEmail(""); setPassword(""); setNewPassword(""); setPage("login");
   }
 
   const loadDashboard = useCallback(async () => {
-    try { const r = await fetch(`${apiBase}/api/admin/dashboard`, { credentials: "include" }); const d = await r.json(); setDashboard(d.data); } catch {}
+    try { const r = await fetch(`${apiBase}/api/admin/dashboard`, { credentials: "include" }); const d = await r.json(); setDashboard(d.data); } catch { /* best-effort — errors surface via empty UI state */ }
   }, []);
 
   const loadAnalytics = useCallback(async () => {
-    try { const r = await fetch(`${apiBase}/api/admin/analytics?days=${dateRange}`, { credentials: "include" }); const d = await r.json(); setAnalytics(d.data); } catch {}
+    try { const r = await fetch(`${apiBase}/api/admin/analytics?days=${dateRange}`, { credentials: "include" }); const d = await r.json(); setAnalytics(d.data); } catch { /* best-effort — errors surface via empty UI state */ }
   }, [dateRange]);
 
   useEffect(() => { if (page === "dashboard") { loadDashboard(); loadAnalytics(); } }, [page, loadDashboard, loadAnalytics]);

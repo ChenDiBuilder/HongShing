@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import QRCode from "qrcode";
 
 const apiBase = import.meta.env.VITE_API_BASE ?? "";
@@ -34,16 +34,23 @@ import React from "react";
 
 interface Props { showToast: (msg: string, type?: "success" | "error") => void; }
 
+async function fetchCampaigns(): Promise<QRCampaign[] | null> {
+  try { const r = await fetch(`${apiBase}/api/admin/qr-campaigns`, { credentials: "include" }); const d = await r.json(); return d.data || []; }
+  catch { /* best-effort — errors surface via empty UI state */ return null; }
+}
+
 export default function QRCampaignsScreen({ showToast }: Props) {
   const [campaigns, setCampaigns] = useState<QRCampaign[]>([]);
   const [name, setName] = useState(""); const [sourceCode, setSourceCode] = useState(""); const [headline, setHeadline] = useState("");
   const [generating, setGenerating] = useState(false);
 
-  const loadCampaigns = useCallback(async () => {
-    try { const r = await fetch(`${apiBase}/api/admin/qr-campaigns`, { credentials: "include" }); const d = await r.json(); setCampaigns(d.data || []); } catch {}
-  }, []);
+  async function loadCampaigns() { const items = await fetchCampaigns(); if (items) setCampaigns(items); }
 
-  useEffect(() => { loadCampaigns(); }, [loadCampaigns]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => { const items = await fetchCampaigns(); if (!cancelled && items) setCampaigns(items); })();
+    return () => { cancelled = true; };
+  }, []);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault(); setGenerating(true);

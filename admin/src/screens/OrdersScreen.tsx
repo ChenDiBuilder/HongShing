@@ -38,23 +38,30 @@ export default function OrdersScreen({ statusFilter: initial, onViewCustomer }: 
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  useEffect(() => { setStatusFilter(initial || ""); }, [initial]);
-
-  async function load() {
+  // Adopt a parent-supplied filter change during render (React's derive-state-from-props pattern).
+  const [prevInitial, setPrevInitial] = useState(initial);
+  if (initial !== prevInitial) {
+    setPrevInitial(initial);
+    setStatusFilter(initial || "");
     setLoading(true);
-    try {
-      const params = statusFilter ? `?status=${statusFilter}` : "";
-      const r = await fetch(`${apiBase}/api/admin/orders${params}`, { credentials: "include" });
-      const d = await r.json();
-      setOrders(d.data?.items || []);
-    } catch {
-      setOrders([]);
-    } finally {
-      setLoading(false);
-    }
   }
 
-  useEffect(() => { load(); }, [statusFilter]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const params = statusFilter ? `?status=${statusFilter}` : "";
+        const r = await fetch(`${apiBase}/api/admin/orders${params}`, { credentials: "include" });
+        const d = await r.json();
+        if (!cancelled) setOrders(d.data?.items || []);
+      } catch {
+        if (!cancelled) setOrders([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [statusFilter]);
 
   return (
     <div>
@@ -62,7 +69,7 @@ export default function OrdersScreen({ statusFilter: initial, onViewCustomer }: 
 
       <div className="flex gap-2 mb-6 flex-wrap">
         {["", "confirmed", "preparing", "ready", "picked_up", "cancelled"].map((s) => (
-          <button key={s} onClick={() => setStatusFilter(s)}
+          <button key={s} onClick={() => { if (s !== statusFilter) { setLoading(true); setStatusFilter(s); } }}
             className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${statusFilter === s ? "bg-red-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
             {s ? s.replace("_", " ") : "All"}
           </button>

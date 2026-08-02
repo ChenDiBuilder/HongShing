@@ -2,10 +2,10 @@ import { useState, useEffect } from "react";
 
 const apiBase = import.meta.env.VITE_API_BASE ?? "";
 
-interface Props { showToast: (msg: string, type?: "success" | "error") => void; }
+interface NotificationRow { id: string; body: string; message_type: string; channel: string; status: string; sent_at?: string | null; }
 
-export default function NotificationsScreen({ showToast: _ }: Props) {
-  const [notifications, setNotifications] = useState<any[]>([]);
+export default function NotificationsScreen() {
+  const [notifications, setNotifications] = useState<NotificationRow[]>([]);
   const [recipientId, setRecipientId] = useState("");
   const [body, setBody] = useState("");
   const [messageType, setMessageType] = useState("marketing");
@@ -61,7 +61,7 @@ export default function NotificationsScreen({ showToast: _ }: Props) {
         <table className="w-full">
           <thead><tr className="border-b text-left text-sm text-gray-500"><th className="p-4">Body</th><th className="p-4">Type</th><th className="p-4">Channel</th><th className="p-4">Status</th><th className="p-4">Sent</th></tr></thead>
           <tbody>
-            {notifications.map((n: any) => (
+            {notifications.map((n) => (
               <tr key={n.id} className="border-b">
                 <td className="p-4 text-sm">{n.body}</td>
                 <td className="p-4 text-sm">{n.message_type}</td>
