@@ -15,7 +15,7 @@ its own EC2 box, own Postgres, own domain, own SMS sender — "restaurant-in-a-b
 ## The one command
 
 ```bash
-AWS_PROFILE=bridgeway SSH_KEY=bridgeway-portal \
+AWS_PROFILE=platform-demo SSH_KEY=bridgeway-portal \
   bash provision-restaurant.sh profiles/<slug>.yaml
 ```
 

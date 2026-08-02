@@ -30,7 +30,7 @@ future upgrade path). Cost: **~$3–8/mo** + SMS usage, vs ~$37/mo for Fargate+A
    ```bash
    cd infra-ec2
    MYIP=$(curl -s https://checkip.amazonaws.com)
-   terraform init -backend-config="profile=bridgeway"
+   terraform init -backend-config="profile=platform-demo"
    terraform apply -var="ssh_ingress_cidr=[\"${MYIP}/32\"]"
    ```
 2. **Create `/opt/hongshing/.env` once** (copy `.env.prod.example`, fill secrets via `openssl rand -hex 32`). Never regenerate `DB_PASSWORD` later — it's tied to the Postgres volume.
@@ -45,13 +45,13 @@ future upgrade path). Cost: **~$3–8/mo** + SMS usage, vs ~$37/mo for Fargate+A
    ```
 4. **Deploy the app**:
    ```bash
-   AWS_PROFILE=bridgeway SSH_KEY=bridgeway-portal bash deploy.sh
+   AWS_PROFILE=platform-demo SSH_KEY=bridgeway-portal bash deploy.sh
    ```
 
 ## Routine deploys
 ```bash
-AWS_PROFILE=bridgeway SSH_KEY=bridgeway-portal bash deploy.sh            # app + safe TF (no apply)
-AWS_PROFILE=bridgeway SSH_KEY=bridgeway-portal bash deploy.sh --app-only # skip terraform
+AWS_PROFILE=platform-demo SSH_KEY=bridgeway-portal bash deploy.sh            # app + safe TF (no apply)
+AWS_PROFILE=platform-demo SSH_KEY=bridgeway-portal bash deploy.sh --app-only # skip terraform
 ```
 `deploy.sh` auto-starts the box if the schedule has it stopped.
 

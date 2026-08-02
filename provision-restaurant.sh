@@ -6,7 +6,7 @@
 # DB-seeded clone on its own EC2 box, under its own Terraform state key.
 #
 # Usage:
-#   AWS_PROFILE=bridgeway SSH_KEY=bridgeway-portal bash provision-restaurant.sh profiles/<slug>.yaml
+#   AWS_PROFILE=platform-demo SSH_KEY=bridgeway-portal bash provision-restaurant.sh profiles/<slug>.yaml
 #
 # What it does (idempotent where reasonable):
 #   1. Read slug/fqdn/sms/owner/compliance from the profile (python3 + PyYAML).
@@ -22,7 +22,7 @@
 # ============================================================================
 set -euo pipefail
 
-AWS_PROFILE="${AWS_PROFILE:-bridgeway}"
+AWS_PROFILE="${AWS_PROFILE:-platform-demo}"
 AWS_REGION="us-east-1"
 SSH_KEY="${SSH_KEY:-bridgeway-portal}"
 HERE="$(cd "$(dirname "$0")" && pwd)"

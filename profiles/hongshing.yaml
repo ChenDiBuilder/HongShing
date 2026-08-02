@@ -62,8 +62,8 @@ locale:
   languages: [en]
 
 compliance:
-  privacy_contact_email: "privacy@hongshing.ca"   # PIPEDA contact (demo value)
-  support_phone: "+1 416-555-0188"                # customer-facing support line (demo value)
+  privacy_contact_email: "daniel.chen@bridgewayinnovations.ca"  # PIPEDA contact (real, monitored; hongshing.ca is a squatter domain)
+  support_phone: "+14169773338"                   # Hong Shing's real line (195 Dundas St W)
   business_mailing_address: "195 Dundas St W, Toronto, ON M5G 1C7"   # CASL — registered mailing address
 
 location:                           # customer-facing storefront display (PRD-12 S8)

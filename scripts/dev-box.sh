@@ -11,7 +11,7 @@
 #   scripts/dev-box.sh logs      # tail the app containers over SSH
 set -euo pipefail
 
-AWS_PROFILE="${AWS_PROFILE:-bridgeway}"
+AWS_PROFILE="${AWS_PROFILE:-platform-demo}"
 AWS_REGION="${AWS_REGION:-us-east-1}"
 SSH_KEY="${SSH_KEY:-bridgeway-portal}"
 NAME_TAG="hongshing-backend"
