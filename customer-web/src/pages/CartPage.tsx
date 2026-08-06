@@ -1,31 +1,18 @@
 import { useState, useEffect } from "react";
-import { formatPrice, taxRate, RESTAURANT_INFO, type UserReward } from "../types";
+import { formatPrice, taxRate, RESTAURANT_INFO, estimateDiscount, type UserReward, type CustomerProfile, type Page } from "../types";
 import { useCart } from "../context/CartContext";
 import { api } from "../context/api";
 
 interface Props {
   primaryColor: string;
-  profile?: any;
+  profile?: CustomerProfile | null;
   rewards?: UserReward[];
   loadRewards?: () => void;
-  setPage: (p: any) => void;
+  setPage: (p: Page) => void;
   isOpen?: boolean;
 }
 
-// Mirror of the backend reward_service.calculate_discount, for a live cart preview.
-// The server re-computes authoritatively at checkout; this only previews the line.
-export function estimateDiscount(reward: UserReward | undefined, subtotalCents: number): number {
-  if (!reward) return 0;
-  const v = reward.reward_value ?? 0;
-  if (subtotalCents <= 0 || v <= 0) return 0;
-  if (reward.reward_type === "percent" || reward.reward_type === "percentage") {
-    return Math.min(Math.floor((subtotalCents * v) / 100), subtotalCents);
-  }
-  if (reward.reward_type === "fixed") return Math.min(v, subtotalCents);
-  return 0;
-}
-
-function PlaceOrderButton({ primaryColor, profile, rewardId, onPlace, closed }: { primaryColor: string; profile?: any; rewardId?: string; onPlace: () => void; closed?: boolean }) {
+function PlaceOrderButton({ primaryColor, profile, rewardId, onPlace, closed }: { primaryColor: string; profile?: CustomerProfile | null; rewardId?: string; onPlace: () => void; closed?: boolean }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -48,7 +35,7 @@ function PlaceOrderButton({ primaryColor, profile, rewardId, onPlace, closed }: 
       if (!res.ok) throw new Error(d.detail || "Checkout failed");
       onPlace();
       window.dispatchEvent(new CustomEvent("order-placed", { detail: d }));
-    } catch (e: any) { setError(e.message || "Couldn't place order. Try again."); }
+    } catch (e) { setError(e instanceof Error ? e.message : "Couldn't place order. Try again."); }
     finally { setLoading(false); }
   }
 
@@ -68,7 +55,6 @@ function PlaceOrderButton({ primaryColor, profile, rewardId, onPlace, closed }: 
 export function CartPage({ primaryColor, profile, rewards, loadRewards, setPage, isOpen }: Props) {
   const closed = isOpen === false;
   const cart = useCart();
-  interface CartItemData { item: any; quantity: number; cartItemId?: string; }
   const [guestName, setGuestName] = useState("");
   const [guestPhone, setGuestPhone] = useState("");
 
@@ -110,7 +96,7 @@ export function CartPage({ primaryColor, profile, rewards, loadRewards, setPage,
       </div>
 
       <div className="space-y-3 mb-6">
-        {cart.items.map((ci: CartItemData) => (
+        {cart.items.map((ci) => (
           <div key={ci.item.id} className="flex items-center gap-3 bg-white rounded-2xl p-3 shadow-sm border border-gray-100">
             <div className="w-12 h-12 bg-gray-100 rounded-xl flex-shrink-0 flex items-center justify-center text-lg">
               {ci.item.image_url ? <img src={ci.item.image_url} alt="" className="w-full h-full object-cover rounded-xl" /> : "🍽️"}

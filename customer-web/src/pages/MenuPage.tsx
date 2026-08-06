@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { categoryEmoji, formatPrice, type MenuItemType } from "../types";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { categoryEmoji, formatPrice, type MenuCategory, type MenuItemType, type Page } from "../types";
 import { useCart } from "../context/CartContext";
 import { CartBar } from "../components/CartBar";
 
@@ -46,7 +46,7 @@ function QuickAddButton({ item, primaryColor }: { item: MenuItemType; primaryCol
 }
 
 function PopularBanner({ popular, primaryColor, setSelectedProduct, setPage }: {
-  popular: MenuItemType[]; primaryColor: string; setSelectedProduct: (i: MenuItemType) => void; setPage: (p: any) => void;
+  popular: MenuItemType[]; primaryColor: string; setSelectedProduct: (i: MenuItemType) => void; setPage: (p: Page) => void;
 }) {
   if (!popular.length) return null;
   return (
@@ -72,8 +72,8 @@ function PopularBanner({ popular, primaryColor, setSelectedProduct, setPage }: {
 }
 
 export function MenuPage({ menu, activeCategory, setActiveCategory, setSelectedProduct, setPage, primaryColor }: {
-  menu: any[]; activeCategory: string; setActiveCategory: (slug: string) => void;
-  setSelectedProduct: (item: MenuItemType) => void; setPage: (p: any) => void; primaryColor: string;
+  menu: MenuCategory[]; activeCategory: string; setActiveCategory: (slug: string) => void;
+  setSelectedProduct: (item: MenuItemType) => void; setPage: (p: Page) => void; primaryColor: string;
 }) {
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
   // When the user taps a category chip we scroll programmatically; suppress the
@@ -81,6 +81,32 @@ export function MenuPage({ menu, activeCategory, setActiveCategory, setSelectedP
   // highlighted chip through intermediate categories on the way there.
   const programmaticScrollUntil = useRef(0);
   const [search, setSearch] = useState("");
+  const [activeTag, setActiveTag] = useState("");
+
+  const allItems: MenuItemType[] = menu.flatMap((c) => c.items || []);
+  const popular = allItems.filter((i) => i.popular);
+  const query = search.toLowerCase().trim();
+
+  const allTags = [...new Set(allItems.flatMap(i => i.tags || []))].sort();
+
+  const filteredMenu = useMemo(() => {
+    let result = menu;
+    if (activeTag) {
+      result = menu.map((cat) => ({
+        ...cat,
+        items: (cat.items || []).filter((i) => (i.tags || []).includes(activeTag)),
+      })).filter((cat) => cat.items.length > 0);
+    }
+    if (query) {
+      result = result.map((cat) => ({
+        ...cat,
+        items: (cat.items || []).filter((i) =>
+          i.name.toLowerCase().includes(query) || (i.description || "").toLowerCase().includes(query)
+        ),
+      })).filter((cat) => (cat.items || []).length > 0);
+    }
+    return result;
+  }, [menu, activeTag, query]);
 
   useEffect(() => {
     if (menu.length === 0) return;
@@ -102,33 +128,7 @@ export function MenuPage({ menu, activeCategory, setActiveCategory, setSelectedP
       if (el) observer.observe(el);
     }
     return () => observer.disconnect();
-  }, [menu, setActiveCategory]);
-
-  const allItems: MenuItemType[] = menu.flatMap((c: any) => c.items || []);
-  const popular = allItems.filter((i) => i.popular);
-  const query = search.toLowerCase().trim();
-  const [activeTag, setActiveTag] = useState("");
-
-  const allTags = [...new Set(allItems.flatMap(i => i.tags || []))].sort();
-
-  const filteredMenu = (() => {
-    let result = menu;
-    if (activeTag) {
-      result = menu.map((cat: any) => ({
-        ...cat,
-        items: (cat.items || []).filter((i: MenuItemType) => (i.tags || []).includes(activeTag)),
-      })).filter((cat: any) => cat.items.length > 0);
-    }
-    if (query) {
-      result = result.map((cat: any) => ({
-        ...cat,
-        items: (cat.items || []).filter((i: MenuItemType) =>
-          i.name.toLowerCase().includes(query) || (i.description || "").toLowerCase().includes(query)
-        ),
-      })).filter((cat: any) => cat.items.length > 0);
-    }
-    return result;
-  })();
+  }, [menu, filteredMenu, setActiveCategory]);
 
   return (
     <div className="pb-24">
@@ -140,7 +140,7 @@ export function MenuPage({ menu, activeCategory, setActiveCategory, setSelectedP
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search menu..."
             className="w-full px-4 py-3 pl-10 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:border-transparent"
-            style={{ "--tw-ring-color": primaryColor } as any}
+            style={{ "--tw-ring-color": primaryColor } as React.CSSProperties}
             aria-label="Search menu items"
           />
           <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -178,7 +178,7 @@ export function MenuPage({ menu, activeCategory, setActiveCategory, setSelectedP
       {!query && (
         <div className="sticky top-0 z-30 bg-gray-50 -mx-4 px-4 pt-1 pb-3">
           <div className="flex gap-2 overflow-x-auto hide-scrollbar">
-            {menu.map((cat: any) => (
+            {menu.map((cat) => (
               <button key={cat.slug}
                 onClick={() => {
                   // Tap-to-jump: scroll here only on an explicit tap, and suppress
@@ -198,14 +198,14 @@ export function MenuPage({ menu, activeCategory, setActiveCategory, setSelectedP
       )}
 
       <div className="space-y-8 mt-2">
-        {filteredMenu.map((cat: any) => (
+        {filteredMenu.map((cat) => (
           <div key={cat.slug} ref={(el) => { sectionRefs.current[cat.slug] = el; }} data-slug={cat.slug}>
             <h2 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
               <span>{categoryEmoji(cat.slug)}</span>
               <span>{cat.name}</span>
             </h2>
             <div className="space-y-3">
-              {cat.items?.map((item: MenuItemType) => (
+              {cat.items?.map((item) => (
                 <button key={item.id}
                   onClick={() => { setSelectedProduct(item); setPage("product-detail"); }}
                   className="w-full flex items-center gap-3 bg-white rounded-2xl p-3 shadow-sm border border-gray-100 text-left active:scale-[0.99] transition-transform">
@@ -241,7 +241,7 @@ export function MenuPage({ menu, activeCategory, setActiveCategory, setSelectedP
 }
 
 export function ProductDetailPage({ product, setPage, primaryColor }: {
-  product: MenuItemType; setPage: (p: any) => void; primaryColor: string;
+  product: MenuItemType; setPage: (p: Page) => void; primaryColor: string;
 }) {
   const cart = useCart();
   const cartItem = cart.items.find((ci) => ci.item.id === product.id);

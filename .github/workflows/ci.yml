@@ -63,5 +63,9 @@ jobs:
           cache-dependency-path: ${{ matrix.app }}/package-lock.json
       - run: npm ci
         working-directory: ${{ matrix.app }}
+      # SCRUM-216: lint gates all three SPAs (debt cleared in SCRUM-212 for
+      # admin/storefront and in this story for customer-web) so it can't regrow.
+      - run: npm run lint
+        working-directory: ${{ matrix.app }}
       - run: npm run build
         working-directory: ${{ matrix.app }}

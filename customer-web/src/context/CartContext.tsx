@@ -1,8 +1,8 @@
 import { createContext, useState, useCallback, useContext, useEffect, useRef, useMemo } from "react";
-import type { CartItem, CartContextType, MenuItemType } from "../types";
+import type { ApiCartLine, CartItem, CartContextType, CustomerProfile, MenuItemType } from "../types";
 import { api } from "./api";
 
-const CartContext = createContext<CartContextType>({
+export const CartContext = createContext<CartContextType>({
   items: [],
   addItem: () => {},
   removeItem: () => {},
@@ -13,26 +13,26 @@ const CartContext = createContext<CartContextType>({
   loadCart: () => {},
 });
 
-export function createCartState(profile: any, onLoadCart?: () => void) {
+export function useCartState(profile: CustomerProfile | null, onLoadCart?: () => void) {
   const [items, setItems] = useState<CartItem[]>([]);
   const subtotalCents = items.reduce((s, ci) => s + ci.item.price_cents * ci.quantity, 0);
   const itemCount = items.reduce((s, ci) => s + ci.quantity, 0);
-  const prevProfile = useRef<any>(null);
+  const prevProfile = useRef<CustomerProfile | null>(null);
 
   const loadCart = useCallback(async () => {
     if (!profile) return;
     try {
       const r = await fetch(api("/api/cart"), { credentials: "include" });
       const d = await r.json();
-      const dbItems = d.cart?.items || [];
-      setItems(dbItems.map((i: any) => ({
+      const dbItems: ApiCartLine[] = d.cart?.items || [];
+      setItems(dbItems.map((i) => ({
         item: { id: i.menu_item_id || i.id, category_id: "", name: i.name, description: null, price_cents: i.price_cents, image_url: null, tags: i.tags || [] },
         quantity: i.quantity,
         cartItemId: i.id,
       })));
       onLoadCart?.();
-    } catch {}
-  }, [profile]);
+    } catch { /* best-effort cart load, ignore failure */ }
+  }, [profile, onLoadCart]);
 
   useEffect(() => {
     if (profile && !prevProfile.current) {
@@ -64,7 +64,7 @@ export function createCartState(profile: any, onLoadCart?: () => void) {
           method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
           body: JSON.stringify({ menu_item_id: item.id, name: item.name, price_cents: item.price_cents, quantity: 1 }),
         });
-      } catch {}
+      } catch { /* best-effort server-cart sync, ignore failure */ }
     }
   }, [profile]);
 
@@ -98,10 +98,10 @@ export function createCartState(profile: any, onLoadCart?: () => void) {
   // updating activeCategory in App) doesn't hand every useCart() consumer a new
   // object identity and re-render all ~78 menu rows on each scroll tick. The
   // callbacks are already useCallback-stable; subtotalCents/itemCount derive from
-  // items, so [items] covers them.
+  // items, so they only change when items does.
   return useMemo(
     () => ({ items, addItem, removeItem, updateQuantity, clearCart, subtotalCents, itemCount, loadCart }),
-    [items, addItem, removeItem, updateQuantity, clearCart, loadCart]
+    [items, addItem, removeItem, updateQuantity, clearCart, subtotalCents, itemCount, loadCart]
   );
 }
 
@@ -109,5 +109,4 @@ export function useCart() {
   return useContext(CartContext);
 }
 
-export { CartContext };
 export type { CartContextType };

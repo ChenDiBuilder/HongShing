@@ -1,19 +1,17 @@
 import { useState } from "react";
 import { api } from "../context/api";
 import { formatPrice } from "../types";
+import type { CustomerProfile, Page } from "../types";
 
 interface LandingPageProps {
   primaryColor: string;
-  setPage: (p: any) => void;
-  setProfile: (p: any) => void;
-  loadCart: () => void;
-  loadRewards: () => void;
+  setPage: (p: Page) => void;
   setPhone: (v: string) => void;
   phone: string;
   source?: string;
 }
 
-export function LandingPage({ primaryColor, setPage, setProfile: _setProfile, loadCart: _loadCart, loadRewards: _loadRewards, setPhone, phone, source }: LandingPageProps) {
+export function LandingPage({ primaryColor, setPage, setPhone, phone, source }: LandingPageProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -48,7 +46,7 @@ export function LandingPage({ primaryColor, setPage, setProfile: _setProfile, lo
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               className="w-full px-4 py-4 border border-gray-300 rounded-xl text-center text-lg focus:outline-none focus:ring-2"
-              style={{ "--tw-ring-color": primaryColor } as any}
+              style={{ "--tw-ring-color": primaryColor } as React.CSSProperties}
             />
             <button
               type="submit"
@@ -71,7 +69,18 @@ export function LandingPage({ primaryColor, setPage, setProfile: _setProfile, lo
   );
 }
 
-export function OtpPage({ phone, setOtp, otp, loading, error, handleVerify, setPage, primaryColor }: any) {
+interface OtpPageProps {
+  phone: string;
+  otp: string;
+  setOtp: (v: string) => void;
+  loading: boolean;
+  error: string;
+  handleVerify: (e: React.FormEvent) => void;
+  setPage: (p: Page) => void;
+  primaryColor: string;
+}
+
+export function OtpPage({ phone, setOtp, otp, loading, error, handleVerify, setPage, primaryColor }: OtpPageProps) {
   return (
     <div className="min-h-screen bg-white flex flex-col">
       <div className="flex-1 flex flex-col items-center justify-center px-4 pb-8">
@@ -84,7 +93,7 @@ export function OtpPage({ phone, setOtp, otp, loading, error, handleVerify, setP
               type="text" inputMode="numeric" maxLength={6}
               value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
               className="w-full px-4 py-4 border border-gray-300 rounded-xl text-center text-2xl tracking-[0.3em] focus:outline-none focus:ring-2"
-              style={{ "--tw-ring-color": primaryColor } as any}
+              style={{ "--tw-ring-color": primaryColor } as React.CSSProperties}
               placeholder="000000"
             />
             <button
@@ -107,7 +116,18 @@ export function OtpPage({ phone, setOtp, otp, loading, error, handleVerify, setP
   );
 }
 
-export function RewardPage({ rewardCode, setPage, primaryColor, rewardSuccessCopy, loadMenu, loadRewards, profile, handleLogout }: any) {
+interface RewardPageProps {
+  rewardCode: string;
+  setPage: (p: Page) => void;
+  primaryColor: string;
+  rewardSuccessCopy?: string;
+  loadMenu: () => void;
+  loadRewards: () => void;
+  profile: CustomerProfile | null;
+  handleLogout?: () => void;
+}
+
+export function RewardPage({ rewardCode, setPage, primaryColor, rewardSuccessCopy, loadMenu, loadRewards, profile, handleLogout }: RewardPageProps) {
   const reward = profile?.rewards?.[0];
 
   return (
