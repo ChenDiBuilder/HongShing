@@ -60,6 +60,19 @@ automatically; agree it's the number we review together monthly.
 - We capture every caller's number + context so nothing said on the phone is
   lost — ask: **"who reviews that, and when?"**
 
+## 5. Demo logistics (verified 2026-08-02)
+
+- **The live box is a clean slate on purpose** — 2 users, 0 orders. Its
+  "This Week" screen truthfully shows "Nothing needs a decision right now"
+  plus a locked quiet-day card explaining what unlocks with history. That's
+  the correct day-one experience; don't seed fake data into the pilot DB.
+- **Demo This Week from the LOCAL seeded environment** (see the repo's local
+  dev notes: seed + demo OTP) so the owner sees real-looking cards — then
+  show the live box's honest empty state and say: "this fills itself as
+  orders come in."
+- The live customer/admin/storefront surfaces and the full order flow demo
+  fine on the box itself.
+
 ---
 
 *Bring back: the filled table, their success number, and the first missing
