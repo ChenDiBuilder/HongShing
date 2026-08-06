@@ -3,8 +3,9 @@ import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 
 from app.config import get_settings
 
@@ -275,6 +276,23 @@ from app.mcp_server import build_mcp_asgi  # noqa: E402
 app.mount("/mcp", build_mcp_asgi())
 
 
+_HEALTH_DB_TIMEOUT_S = 2.0
+
+
 @app.get("/api/health")
-async def health():
+async def health(response: Response):
+    """Liveness + DB reachability (SCRUM-220).
+
+    Returns 503 when the database is unreachable — the Route53 canary in
+    bridgeway-portal/ops/uptime.tf alarms on any non-2xx, so a DB-down pilot
+    outage pages instead of hiding behind a hardcoded 200 while every real
+    endpoint 500s.
+    """
+    try:
+        async with asyncio.timeout(_HEALTH_DB_TIMEOUT_S):
+            async with engine.connect() as conn:
+                await conn.execute(text("SELECT 1"))
+    except Exception:
+        response.status_code = 503
+        return {"status": "db_unreachable"}
     return {"status": "ok"}
