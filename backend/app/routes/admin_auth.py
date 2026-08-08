@@ -21,7 +21,12 @@ ADMIN_ROLES = ["owner", "manager", "staff"]
 router = APIRouter()
 settings = get_settings()
 
-ACCESS_TOKEN_MAX_AGE = 60 * 15
+# Admin access-token lifetime. Bumped 15min -> 2h (Daniel, 2026-08-08): the SPA
+# does not yet auto-refresh on 401 (the 12h refresh token is issued but unused by
+# the frontend), so the effective session == this value. 15min was timing admins
+# out mid-task / mid-demo; 2h is a comfortable working session. The real fix
+# (wire /refresh into the SPA for the full rolling 12h) is tracked separately.
+ACCESS_TOKEN_MAX_AGE = 60 * 60 * 2
 ADMIN_REFRESH_MAX_AGE = 60 * 60 * 12
 
 
