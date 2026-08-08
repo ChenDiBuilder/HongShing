@@ -261,9 +261,12 @@ export function ProductDetailPage({ product, setPage, primaryColor }: {
   return (
     <div className="pb-28">
       <button onClick={() => setPage("menu")} className="text-sm text-gray-500 mb-3 hover:underline">← Back to Menu</button>
+      {/* object-contain, not cover: the detail view must show the WHOLE photo —
+          cover cropped/zoomed it to fill the frame on screens whose width
+          didn't match the photo's aspect. The gray frame letterboxes it. */}
       <div className="w-full h-56 bg-gray-100 rounded-2xl flex items-center justify-center text-5xl overflow-hidden mb-4">
         {product.image_url
-          ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+          ? <img src={product.image_url} alt={product.name} className="w-full h-full object-contain" />
           : <span className="text-5xl">🍽️</span>}
       </div>
       <h1 className="text-xl font-bold text-gray-800 mb-1">{product.name}</h1>
