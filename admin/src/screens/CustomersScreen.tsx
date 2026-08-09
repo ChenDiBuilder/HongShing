@@ -8,6 +8,9 @@ interface Customer {
   name?: string;
   email?: string;
   created_at: string;
+  visits: number;
+  avg_ticket_cents: number | null;
+  last_order_at: string | null;
 }
 
 interface CustomerDetail {
@@ -128,14 +131,16 @@ export default function CustomersScreen({ selectedCustomerId }: Props) {
           <p className="text-center text-gray-400 py-8">No customers found</p>
         ) : (
         <table className="w-full">
-          <thead><tr className="border-b text-left text-sm text-gray-500"><th className="p-4">Phone</th><th className="p-4">Name</th><th className="p-4">Email</th><th className="p-4">Joined</th></tr></thead>
+          <thead><tr className="border-b text-left text-sm text-gray-500"><th className="p-4">Phone</th><th className="p-4">Name</th><th className="p-4">Visits</th><th className="p-4">Avg ticket</th><th className="p-4">Last seen</th><th className="p-4">Joined</th></tr></thead>
           <tbody>
             {customers.map((c) => (
               <tr key={c.id} onClick={() => viewCustomer(c.id)} className="border-b hover:bg-gray-50 cursor-pointer">
                 <td className="p-4 font-mono">{c.phone || "-"}</td>
                 <td className="p-4">{c.name || "-"}</td>
-                <td className="p-4 text-sm text-gray-600">{c.email || "-"}</td>
-                <td className="p-4 text-sm">{new Date(c.created_at).toLocaleDateString()}</td>
+                <td className="p-4">{c.visits}</td>
+                <td className="p-4">{c.avg_ticket_cents != null ? `$${(c.avg_ticket_cents / 100).toFixed(2)}` : "—"}</td>
+                <td className="p-4 text-sm">{c.last_order_at ? new Date(c.last_order_at).toLocaleDateString() : "Never"}</td>
+                <td className="p-4 text-sm text-gray-500">{new Date(c.created_at).toLocaleDateString()}</td>
               </tr>
             ))}
           </tbody>

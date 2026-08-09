@@ -25,7 +25,25 @@ async def list_customers(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_admin(["owner", "manager", "staff"])),
 ):
-    query = select(User).where(User.role == "customer")
+    # Per-customer value signals in one aggregate join (no N+1): visits,
+    # average ticket, most recent order. Cancelled orders don't count.
+    stats = (
+        select(
+            Order.user_id.label("uid"),
+            func.count(Order.id).label("visits"),
+            func.avg(Order.total_cents).label("avg_cents"),
+            func.max(Order.created_at).label("last_order_at"),
+        )
+        .where(Order.status != "cancelled")
+        .group_by(Order.user_id)
+        .subquery()
+    )
+
+    query = (
+        select(User, stats.c.visits, stats.c.avg_cents, stats.c.last_order_at)
+        .join(stats, stats.c.uid == User.id, isouter=True)
+        .where(User.role == "customer")
+    )
 
     if search:
         query = query.where(
@@ -36,8 +54,12 @@ async def list_customers(
         )
 
     total = await db.scalar(select(func.count()).select_from(query.subquery()))
-    result = await db.execute(query.order_by(User.created_at.desc()).offset(offset).limit(limit))
-    customers = result.scalars().all()
+    result = await db.execute(
+        query.order_by(stats.c.last_order_at.desc().nullslast(), User.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+    rows = result.all()
 
     return {
         "data": {
@@ -48,8 +70,11 @@ async def list_customers(
                     "name": c.name,
                     "email": c.email,
                     "created_at": c.created_at.isoformat(),
+                    "visits": visits or 0,
+                    "avg_ticket_cents": int(avg_cents) if avg_cents is not None else None,
+                    "last_order_at": last_order_at.isoformat() if last_order_at else None,
                 }
-                for c in customers
+                for c, visits, avg_cents, last_order_at in rows
             ],
             "total": total,
             "limit": limit,
