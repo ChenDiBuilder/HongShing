@@ -56,7 +56,11 @@ function formatTime(iso: string) {
 }
 
 export function AnalyticsPanel({ data }: { data: AnalyticsData }) {
-  const { funnel, sources, sms_opt_in_rate, summary } = data;
+  // SCRUM-238: this panel's own "today" tile row was deleted — it duplicated
+  // the dashboard's hero cards in a second visual style (SMS Opt-in rendered
+  // three times on one page). The heroes in App.tsx are the single source;
+  // this panel now renders only the ranged Trends content (funnel, series).
+  const { funnel, sources } = data;
   const maxFunnel = Math.max(funnel.qr_scans, funnel.signups, funnel.rewards_issued, funnel.redirects, funnel.orders, 1);
   const maxOrders = Math.max(...data.daily_volume.map((d) => d.orders), 1);
   const maxQty = Math.max(...data.top_dishes.map((d) => d.total_quantity), 1);
@@ -64,39 +68,7 @@ export function AnalyticsPanel({ data }: { data: AnalyticsData }) {
   const topSources = sources.slice(0, 5);
 
   return (
-    <div className="mt-10 space-y-8">
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3">
-        <div className="bg-white rounded-xl shadow-sm p-4">
-          <p className="text-xs text-gray-400 uppercase tracking-wide">Scans Today</p>
-          <p className="text-2xl font-bold mt-1">{summary.today.scans}</p>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm p-4">
-          <p className="text-xs text-gray-400 uppercase tracking-wide">Signups Today</p>
-          <p className="text-2xl font-bold mt-1">{summary.today.signups}</p>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm p-4">
-          <p className="text-xs text-gray-400 uppercase tracking-wide">Rewards Issued</p>
-          <p className="text-2xl font-bold mt-1">{summary.today.rewards_issued}</p>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm p-4">
-          <p className="text-xs text-gray-400 uppercase tracking-wide">Rewards Redeemed</p>
-          <p className="text-2xl font-bold mt-1">{summary.today.rewards_redeemed}</p>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm p-4">
-          <p className="text-xs text-gray-400 uppercase tracking-wide">Redirects</p>
-          <p className="text-2xl font-bold mt-1">{summary.today.redirects}</p>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm p-4">
-          <p className="text-xs text-gray-400 uppercase tracking-wide">Orders Today</p>
-          <p className="text-2xl font-bold mt-1">{summary.today.orders}</p>
-          <p className="text-xs text-gray-500">${(summary.today.revenue_cents / 100).toFixed(2)}</p>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm p-4">
-          <p className="text-xs text-gray-400 uppercase tracking-wide">SMS Opt-in</p>
-          <p className="text-2xl font-bold mt-1">{sms_opt_in_rate}%</p>
-        </div>
-      </div>
-
+    <div className="mt-4 space-y-8">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 bg-white rounded-xl shadow-sm p-6">
           <h3 className="text-lg font-bold mb-4">Acquisition Funnel</h3>

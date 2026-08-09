@@ -189,8 +189,25 @@ export default function App() {
       <main className="flex-1 p-8">
         {page === "dashboard" && (
           <div>
-            <div className="flex items-center justify-between mb-6">
-              <h1 className="text-3xl font-bold">Dashboard</h1>
+            <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
+
+            {/* SCRUM-238: ONE card set, one style. These are always TODAY's
+                numbers — the range selector below governs only the Trends
+                section (it never affected these, which read ambiguously). */}
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-3">Today</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+              <MetricCard label="Scans" value={dashboard?.scans_today ?? 0} />
+              <MetricCard label="Signups" value={dashboard?.signups_today ?? 0} />
+              <MetricCard label="Redirects" value={dashboard?.redirects_today ?? 0} />
+              <MetricCard label="Orders" value={analytics?.summary?.today?.orders ?? 0} />
+              <MetricCard label="Revenue" value={`$${((analytics?.summary?.today?.revenue_cents ?? 0) / 100).toFixed(2)}`} />
+              <MetricCard label="Rewards Issued" value={analytics?.summary?.today?.rewards_issued ?? 0} />
+              <MetricCard label="Rewards Redeemed" value={analytics?.summary?.today?.rewards_redeemed ?? 0} />
+              <MetricCard label="SMS Opt-in" value={`${dashboard?.sms_opt_in_rate ?? 0}%`} />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold">Trends</h2>
               <select
                 value={dateRange}
                 onChange={(e) => setDateRange(e.target.value)}
@@ -200,14 +217,6 @@ export default function App() {
                 <option value="30">Last 30 days</option>
                 <option value="90">Last 90 days</option>
               </select>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
-              <MetricCard label="Scans Today" value={dashboard?.scans_today ?? 0} />
-              <MetricCard label="Signups Today" value={dashboard?.signups_today ?? 0} />
-              <MetricCard label="Redirects Today" value={dashboard?.redirects_today ?? 0} />
-              <MetricCard label="Orders Today" value={analytics?.summary?.today?.orders ?? 0} />
-              <MetricCard label="Revenue Today" value={`$${((analytics?.summary?.today?.revenue_cents ?? 0) / 100).toFixed(2)}`} />
-              <MetricCard label="SMS Opt-in" value={`${dashboard?.sms_opt_in_rate ?? 0}%`} />
             </div>
 
             {!analytics ? (
