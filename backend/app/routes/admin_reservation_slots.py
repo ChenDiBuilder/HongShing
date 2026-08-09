@@ -25,7 +25,11 @@ async def list_slots(
     user: User = Depends(require_admin(["owner", "manager"])),
 ):
     result = await db.execute(
-        select(ReservationSlot).order_by(ReservationSlot.day_of_week, ReservationSlot.start_time)
+        select(ReservationSlot)
+        # Soft-deleted slots stay in the DB for history but are gone from every
+        # view — the customer picker (routes/reservations.py) filters the same way.
+        .where(ReservationSlot.is_active == True)  # noqa: E712
+        .order_by(ReservationSlot.day_of_week, ReservationSlot.start_time)
     )
     slots = result.scalars().all()
     return {

@@ -88,6 +88,12 @@ export default function ReservationSlotsScreen({ showToast }: Props) {
         <button type="submit" className="px-4 py-2 bg-red-600 text-white rounded-lg">Add Slot</button>
       </form>
 
+      {slots.length === 0 && (
+        <div className="bg-white rounded-xl shadow-sm p-12 text-center text-gray-400">
+          No reservation slots yet — add your first above.
+        </div>
+      )}
+
       {DAYS.map((day, dayIdx) => {
         const daySlots = grouped[dayIdx] || [];
         if (daySlots.length === 0) return null;
