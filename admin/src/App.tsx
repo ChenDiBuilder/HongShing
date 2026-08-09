@@ -112,8 +112,13 @@ export default function App() {
 
   useEffect(() => { if (page === "dashboard") { loadDashboard(); loadAnalytics(); } }, [page, loadDashboard, loadAnalytics]);
 
+  // SCRUM-237: the fixed sidebar ate ~55% of a phone screen; below lg it becomes
+  // a top bar + slide-over drawer. Drawer closes on any navigation.
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
   function navigateTo(key: Page, filter?: string) {
     setPage(key);
+    setMobileNavOpen(false);
     if (key === "orders" && filter) setOrdersFilter(filter);
     if (key === "customers" && filter) setSelectedCustomerId(filter);
   }
@@ -174,19 +179,45 @@ export default function App() {
     { key: "settings", label: "Restaurant Settings" },
   ];
 
+  const navContent = (
+    <>
+      <h2 className="text-xl font-bold mb-8">Admin</h2>
+      <nav className="space-y-1 flex-1">
+        {navItems.map(item => (
+          <button key={item.key} onClick={() => navigateTo(item.key)} className={`block w-full text-left py-2 px-3 rounded text-sm ${page === item.key ? "bg-gray-800 font-medium" : "hover:bg-gray-800 text-gray-300"}`}>{item.label}</button>
+        ))}
+      </nav>
+      <button onClick={handleLogout} className="text-sm text-gray-500 hover:text-white text-left">Sign Out</button>
+    </>
+  );
+
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      <aside className="w-64 bg-gray-900 text-white p-6 min-h-screen flex flex-col">
-        <h2 className="text-xl font-bold mb-8">Admin</h2>
-        <nav className="space-y-1 flex-1">
-          {navItems.map(item => (
-            <button key={item.key} onClick={() => navigateTo(item.key)} className={`block w-full text-left py-2 px-3 rounded text-sm ${page === item.key ? "bg-gray-800 font-medium" : "hover:bg-gray-800 text-gray-300"}`}>{item.label}</button>
-          ))}
-        </nav>
-        <button onClick={handleLogout} className="text-sm text-gray-500 hover:text-white">Sign Out</button>
+    <div className="min-h-screen bg-gray-50 lg:flex">
+      {/* Mobile top bar (hidden on lg+) */}
+      <header className="lg:hidden sticky top-0 z-40 bg-gray-900 text-white flex items-center gap-3 px-4 py-3">
+        <button onClick={() => setMobileNavOpen(true)} aria-label="Open navigation" className="p-1 -ml-1">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+        </button>
+        <h2 className="text-lg font-bold">Admin</h2>
+        <span className="ml-auto text-sm text-gray-400">{navItems.find(i => i.key === page)?.label ?? ""}</span>
+      </header>
+
+      {/* Mobile slide-over drawer */}
+      {mobileNavOpen && (
+        <div className="lg:hidden fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setMobileNavOpen(false)} aria-hidden="true" />
+          <aside className="absolute left-0 top-0 bottom-0 w-64 bg-gray-900 text-white p-6 flex flex-col shadow-xl">
+            {navContent}
+          </aside>
+        </div>
+      )}
+
+      {/* Desktop sidebar (unchanged look, hidden below lg) */}
+      <aside className="hidden lg:flex w-64 bg-gray-900 text-white p-6 min-h-screen flex-col">
+        {navContent}
       </aside>
 
-      <main className="flex-1 p-8">
+      <main className="flex-1 p-4 lg:p-8">
         {page === "dashboard" && (
           <div>
             <div className="flex items-center justify-between mb-6">
