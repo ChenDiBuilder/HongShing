@@ -120,11 +120,14 @@ export default function RewardsScreen({ showToast }: Props) {
               <thead><tr className="border-b text-left text-sm text-gray-500"><th className="p-4">Name</th><th className="p-4">Type</th><th className="p-4">Value</th><th className="p-4">Valid Days</th><th className="p-4">Active</th><th className="p-4">Actions</th></tr></thead>
               <tbody>
                 {templates.map((t) => (
-                  <tr key={t.id} className="border-b">
+                  <tr key={t.id} className={`border-b ${t.active ? "" : "opacity-50"}`}>
                     <td className="p-4">{t.name}</td><td className="p-4">{t.reward_type}</td>
                     <td className="p-4">{t.reward_type === "fixed" ? `$${(t.reward_value / 100).toFixed(2)}` : `${t.reward_value}%`}</td>
-                    <td className="p-4">{t.valid_days}</td><td className="p-4">{t.active ? "✅" : "—"}</td>
-                    <td className="p-4"><button onClick={() => handleDelete(t.id)} className="text-sm text-red-600 hover:underline">Delete</button></td>
+                    <td className="p-4">{t.valid_days}</td>
+                    <td className="p-4">
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${t.active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>{t.active ? "Active" : "Inactive"}</span>
+                    </td>
+                    <td className="p-4">{t.active && <button onClick={() => handleDelete(t.id)} className="text-sm text-red-600 hover:underline">Deactivate</button>}</td>
                   </tr>
                 ))}
               </tbody>
