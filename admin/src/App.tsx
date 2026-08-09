@@ -13,6 +13,16 @@ type Page = "login" | "change-password" | "dashboard" | "decisions" | "qr-campai
 
 interface DashboardData { scans_today: number; signups_today: number; redirects_today: number; sms_opt_in_rate: number; }
 
+// The two pilot success metrics (docs/pilot-owner-conversation.md §2).
+interface GoalsData {
+  window_days: number;
+  phones_captured: number;
+  orders: number;
+  capture_per_100_orders: number | null;
+  winback_revenue_cents: number;
+  winback_redemptions: number;
+}
+
 const apiBase = import.meta.env.VITE_API_BASE ?? "";
 
 function Toast({ message, type, onDismiss }: { message: string; type: "success" | "error"; onDismiss: () => void }) {
@@ -30,6 +40,16 @@ function MetricCard({ label, value, onClick }: { label: string; value: string | 
       <p className="text-sm text-gray-500">{label}</p>
       <p className="text-3xl font-bold mt-1">{value}</p>
       {onClick && <p className="text-xs text-red-500 mt-1 opacity-0 group-hover:opacity-100 hover:opacity-100">View →</p>}
+    </div>
+  );
+}
+
+function GoalHero({ label, value, sub }: { label: string; value: string; sub: string }) {
+  return (
+    <div className="bg-white rounded-xl shadow-sm p-6 border-l-4 border-red-600">
+      <p className="text-sm font-semibold text-red-600 uppercase tracking-wide">{label}</p>
+      <p className="text-4xl font-bold mt-2">{value}</p>
+      <p className="text-sm text-gray-500 mt-2">{sub}</p>
     </div>
   );
 }
@@ -54,6 +74,7 @@ export default function App() {
   const [error, setError] = useState("");
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+  const [goals, setGoals] = useState<GoalsData | null>(null);
   const [dateRange, setDateRange] = useState("14");
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [ordersFilter, setOrdersFilter] = useState("");
@@ -104,6 +125,7 @@ export default function App() {
 
   const loadDashboard = useCallback(async () => {
     try { const r = await fetch(`${apiBase}/api/admin/dashboard`, { credentials: "include" }); const d = await r.json(); setDashboard(d.data); } catch { /* best-effort — errors surface via empty UI state */ }
+    try { const r = await fetch(`${apiBase}/api/admin/analytics/goals`, { credentials: "include" }); const d = await r.json(); setGoals(d.data); } catch { /* best-effort — errors surface via empty UI state */ }
   }, []);
 
   const loadAnalytics = useCallback(async () => {
@@ -201,6 +223,19 @@ export default function App() {
                 <option value="90">Last 90 days</option>
               </select>
             </div>
+            <div className="grid md:grid-cols-2 gap-4 mb-6">
+              <GoalHero
+                label="Phone capture — pilot goal"
+                value={goals?.capture_per_100_orders != null ? `${goals.capture_per_100_orders} / 100 orders` : "—"}
+                sub={`${goals?.phones_captured ?? 0} phones captured · last ${goals?.window_days ?? 30} days`}
+              />
+              <GoalHero
+                label="Win-back revenue — pilot goal"
+                value={`$${((goals?.winback_revenue_cents ?? 0) / 100).toFixed(2)}`}
+                sub={`${goals?.winback_redemptions ?? 0} comeback${(goals?.winback_redemptions ?? 0) === 1 ? "" : "s"} attributed by the ledger · last ${goals?.window_days ?? 30} days`}
+              />
+            </div>
+
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
               <MetricCard label="Scans Today" value={dashboard?.scans_today ?? 0} />
               <MetricCard label="Signups Today" value={dashboard?.signups_today ?? 0} />

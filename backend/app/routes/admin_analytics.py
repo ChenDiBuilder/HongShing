@@ -6,6 +6,7 @@ from sqlalchemy import select, func, text, union_all, literal_column, literal
 from app.database import AsyncSession, get_db
 from app.middleware.auth import require_admin
 from app.models import (
+    InsightAction,
     Order,
     OrderItem,
     User,
@@ -18,6 +19,10 @@ from app.models import (
 )
 
 router = APIRouter()
+
+# Mirrors admin_insights._EXCLUDED_ORDER_STATUSES — cancelled orders never count
+# toward attributed revenue.
+_EXCLUDED_ORDER_STATUSES = ("cancelled",)
 
 
 async def _count_scans(db: AsyncSession, since: datetime) -> int:
@@ -291,6 +296,77 @@ async def _recent_activity(db: AsyncSession, limit: int = 20) -> list[dict]:
 
     items.sort(key=lambda x: x["created_at"], reverse=True)
     return items[:limit]
+
+
+@router.get("/analytics/goals")
+async def goal_metrics(
+    days: int = Query(30, ge=1, le=365),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_admin(["owner", "manager", "staff"])),
+):
+    """The two pilot success metrics (docs/pilot-owner-conversation.md §2):
+    phone capture per 100 orders and win-back revenue attributed to insight
+    actions. Orders stand in for covers — the closest unit this system sees.
+    """
+    now = datetime.now(timezone.utc)
+    since = now - timedelta(days=days)
+
+    phones = await _count_signups(db, since)
+    orders = await _count_orders(db, since)
+
+    # Win-back attribution reuses the ledger semantics from
+    # admin_insights._actions_with_outcomes (incl. its double-count guard:
+    # reminder actions never credit rewards an offer action minted), narrowed
+    # to redemptions/orders inside the window.
+    actions = (await db.execute(select(InsightAction))).scalars().all()
+    winback_revenue = 0
+    winback_redemptions = 0
+    for a in actions:
+        if a.action_type == "send_offer":
+            reward_filter = Reward.source_code == a.source_code
+        else:
+            reward_ids = (a.params or {}).get("reward_ids", [])
+            if not reward_ids:
+                continue
+            reward_filter = Reward.id.in_(reward_ids) & (
+                Reward.source_code.is_(None) | Reward.source_code.notlike("dec-%")
+            )
+
+        winback_redemptions += (
+            await db.scalar(
+                select(func.count(Reward.id)).where(
+                    reward_filter,
+                    Reward.status == "redeemed",
+                    Reward.redeemed_at > a.created_at,
+                    Reward.redeemed_at >= since,
+                )
+            )
+            or 0
+        )
+        winback_revenue += (
+            await db.scalar(
+                select(func.coalesce(func.sum(Order.total_cents), 0))
+                .join(Reward, Reward.id == Order.reward_id)
+                .where(
+                    reward_filter,
+                    Order.created_at > a.created_at,
+                    Order.created_at >= since,
+                    Order.status.notin_(_EXCLUDED_ORDER_STATUSES),
+                )
+            )
+            or 0
+        )
+
+    return {
+        "data": {
+            "window_days": days,
+            "phones_captured": phones,
+            "orders": orders,
+            "capture_per_100_orders": round(phones / orders * 100, 1) if orders else None,
+            "winback_revenue_cents": winback_revenue,
+            "winback_redemptions": winback_redemptions,
+        }
+    }
 
 
 @router.get("/analytics")
