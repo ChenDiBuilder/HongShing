@@ -17,6 +17,7 @@ interface Settings {
 export default function SettingsScreen({ showToast }: Props) {
   const [settings, setSettings] = useState<Settings>({});
   const [saved, setSaved] = useState(false);
+  const [logoBroken, setLogoBroken] = useState(false);
 
   useEffect(() => {
     fetch(`${apiBase}/api/admin/settings`, { credentials: "include" })
@@ -53,18 +54,32 @@ export default function SettingsScreen({ showToast }: Props) {
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Primary Color</label>
-          <input value={settings.primary_color || ""} onChange={(e) => setSettings({ ...settings, primary_color: e.target.value })} className="w-full px-3 py-2 border rounded-lg" />
+          <div className="flex items-center gap-2">
+            <input
+              type="color"
+              aria-label="Pick primary color"
+              value={/^#[0-9a-fA-F]{6}$/.test(settings.primary_color || "") ? (settings.primary_color as string) : "#dc2626"}
+              onChange={(e) => setSettings({ ...settings, primary_color: e.target.value })}
+              className="h-10 w-12 border rounded-lg cursor-pointer p-1 bg-white"
+            />
+            <input value={settings.primary_color || ""} onChange={(e) => setSettings({ ...settings, primary_color: e.target.value })} placeholder="#dc2626" className="flex-1 px-3 py-2 border rounded-lg font-mono text-sm" />
+          </div>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Logo</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Logo (served path)</label>
           {settings.logo_url ? (
             <div className="flex items-center gap-3">
-              <img src={settings.logo_url} alt="Restaurant logo" className="h-12 w-auto border rounded" />
+              {logoBroken ? (
+                <span className="h-12 w-12 flex items-center justify-center bg-gray-100 border rounded text-gray-400 text-xs">n/a</span>
+              ) : (
+                <img src={settings.logo_url} alt="Restaurant logo" onError={() => setLogoBroken(true)} className="h-12 w-auto border rounded" />
+              )}
               <span className="text-xs text-gray-500 break-all">{settings.logo_url}</span>
             </div>
           ) : (
-            <p className="text-sm text-gray-400">No logo configured (set via the restaurant profile at provisioning).</p>
+            <p className="text-sm text-gray-400">No logo configured.</p>
           )}
+          <p className="text-xs text-gray-400 mt-1">Set at provisioning via the restaurant profile — in-admin upload is a future item.</p>
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">External Ordering URL</label>
