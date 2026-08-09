@@ -19,6 +19,20 @@ interface Order {
   created_at: string;
 }
 
+// Canonical lifecycle — mirrors VALID_TRANSITIONS in backend/app/routes/storefront_orders.py.
+const ORDER_STATUSES = ["confirmed", "preparing", "ready", "picked_up", "cancelled"] as const;
+
+const STATUS_LABELS: Record<string, string> = {
+  confirmed: "Confirmed",
+  preparing: "Preparing",
+  ready: "Ready",
+  picked_up: "Picked up",
+  cancelled: "Cancelled",
+};
+
+// Unknown statuses fall back to the raw value so vocabulary drift stays visible.
+const statusLabel = (s: string) => STATUS_LABELS[s] ?? s.replace("_", " ");
+
 const STATUS_COLORS: Record<string, string> = {
   confirmed: "bg-blue-100 text-blue-700",
   preparing: "bg-yellow-100 text-yellow-700",
@@ -68,10 +82,10 @@ export default function OrdersScreen({ statusFilter: initial, onViewCustomer }: 
       <h1 className="text-3xl font-bold mb-6">Orders</h1>
 
       <div className="flex gap-2 mb-6 flex-wrap">
-        {["", "confirmed", "preparing", "ready", "picked_up", "cancelled"].map((s) => (
+        {["", ...ORDER_STATUSES].map((s) => (
           <button key={s} onClick={() => { if (s !== statusFilter) { setLoading(true); setStatusFilter(s); } }}
             className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${statusFilter === s ? "bg-red-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
-            {s ? s.replace("_", " ") : "All"}
+            {s ? statusLabel(s) : "All"}
           </button>
         ))}
       </div>
@@ -103,12 +117,12 @@ export default function OrdersScreen({ statusFilter: initial, onViewCustomer }: 
                       )}
                     </div>
                     <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_COLORS[o.status] || "bg-gray-100"}`}>
-                      {o.status.replace("_", " ")}
+                      {statusLabel(o.status)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
-                      <span className="text-sm text-gray-600">{o.item_count} items · ${(o.total_cents / 100).toFixed(2)}</span>
+                      <span className="text-sm text-gray-600">{o.item_count} {o.item_count === 1 ? "item" : "items"} · ${(o.total_cents / 100).toFixed(2)}</span>
                       {o.items.length > 0 && (
                         <span className="text-xs text-gray-400 ml-3 truncate max-w-xs inline-block align-bottom">
                           {o.items.map(i => `${i.quantity}x ${i.name}`).join(", ")}
@@ -121,7 +135,7 @@ export default function OrdersScreen({ statusFilter: initial, onViewCustomer }: 
                     <svg className={`w-3 h-3 transition-transform ${isExpanded ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
-                    {isExpanded ? "Hide items" : o.items.length > 0 ? `${o.items.length} item types` : "View details"}
+                    {isExpanded ? "Hide items" : o.items.length > 0 ? `${o.items.length} item type${o.items.length === 1 ? "" : "s"}` : "View details"}
                   </div>
                 </div>
 
