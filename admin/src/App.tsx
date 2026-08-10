@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { installAuthRefresh } from "./lib/authRefresh";
 import DecisionsScreen from "./screens/DecisionsScreen";
 import QRCampaignsScreen from "./screens/QRCampaignsScreen";
 import RewardsScreen from "./screens/RewardsScreen";
@@ -59,6 +60,20 @@ export default function App() {
   const [ordersFilter, setOrdersFilter] = useState("");
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [restoring, setRestoring] = useState(true);
+
+  // Silent refresh keeps the session rolling for the refresh token's full 12h;
+  // only a failed refresh lands here. pageRef keeps the cold-visit probe (401
+  // with no session at all) from toasting "expired" at someone who never
+  // signed in. Declared before the restore effect so the probe is covered.
+  const pageRef = useRef(page);
+  useEffect(() => { pageRef.current = page; }, [page]);
+  useEffect(() => {
+    installAuthRefresh(() => {
+      if (pageRef.current === "login" || pageRef.current === "change-password") return;
+      setPage("login");
+      setToast({ message: "Session expired — please sign in again", type: "error" });
+    });
+  }, []);
 
   // A dev-server reload (or a plain refresh) shouldn't dump an authed session
   // back at the login form — the cookie is still valid; use it.
